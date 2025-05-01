@@ -146,7 +146,7 @@ function Game({ gameObj, playerNumber, handleMainMenu }) {
       </div>
       <div className="game-container">
         <div className="round-container">
-          <h2>You are player {playerNumber} </h2>
+          <h2>Player {playerNumber} </h2>
           <h2 className="round-item">Round {gameState.currentRound}/5</h2>
         </div>
         <ReactionBox

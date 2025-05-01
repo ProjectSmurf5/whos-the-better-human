@@ -12,3 +12,11 @@
   flex-direction: column;
   margin-bottom: 1rem;
 }
+
+@media (max-width: 1194px) {
+  .ready-button {
+    width: 200px;
+    height: 40px;
+    font-size: 16px;
+  }
+}

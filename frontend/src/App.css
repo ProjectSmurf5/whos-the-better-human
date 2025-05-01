@@ -160,3 +160,81 @@
   font-weight: 100;
   text-align: left;
 }
+
+.round-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row;
+  padding: 1rem;
+}
+
+@media (max-width: 1194px) {
+  /* Make NavBar smaller */
+  .nav-container {
+    padding: 0.5rem;
+  }
+  .nav-container .nav-item {
+    font-size: 1rem;
+  }
+  .nav-container .nav-item:first-of-type {
+    left: 1rem;
+  }
+  .nav-container .nav-item:last-of-type {
+    right: 1rem;
+  }
+  /* Make the side interface smaller */
+  .side-interface-container {
+    width: 250px;
+    top: 4rem;
+  }
+  /* Make the table smaller */
+  .table-container {
+    width: 250px;
+  }
+  .table-container th {
+    font-size: 0.75rem;
+  }
+  .table-container td {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 800px) {
+  /* Make the side interface On top */
+  .side-interface-container {
+    width: 100%;
+    top: 0;
+    height: auto;
+    position: static;
+  }
+  /* Make the table smaller */
+  .table-container {
+    width: 100%;
+  }
+  /* Make the navigation bar vertical and smaller */
+  .nav-container {
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+  }
+  .nav-container .nav-item {
+    position: static;
+    transform: none;
+    text-align: center;
+  }
+  .nav-container h1 {
+    font-size: 1.5rem;
+  }
+  /* Make the Round Info smaller */
+  .round-container {
+    width: 100%;
+    padding: 0.5rem;
+  }
+  .round-container h1 {
+    font-size: 1.5rem;
+  }
+  .round-container h2 {
+    font-size: 1rem;
+  }
+}

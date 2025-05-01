@@ -3,6 +3,7 @@
   justify-content: center;
   align-items: center;
   flex-direction: column;
+  padding: 1rem;
 }
 
 .reaction-box h1 {
@@ -24,4 +25,53 @@
 
 .round {
   opacity: 50%;
+}
+
+@media (max-width: 1194px) {
+  .click-button {
+    width: 400px;
+    height: 400px;
+    font-size: 16px;
+  }
+  .click {
+    font-size: 32px;
+  }
+  .round {
+    font-size: 16px;
+  }
+  .reaction-box h1 {
+    font-size: 24px;
+  }
+  .reaction-box {
+    padding: 0.5rem;
+    width: 400px;
+    height: 400px;
+  }
+  .reaction-box h1 {
+    margin: 0;
+  }
+}
+@media (max-width: 900px) {
+  .click-button {
+    width: 300px;
+    height: 300px;
+    font-size: 14px;
+  }
+  .click {
+    font-size: 24px;
+  }
+  .round {
+    font-size: 14px;
+  }
+  .reaction-box h1 {
+    font-size: 20px;
+  }
+  .reaction-box {
+    padding: 0.5rem;
+    width: 300px;
+    height: 300px;
+  }
+  .reaction-box h1 {
+    margin: 0;
+  }
 }
