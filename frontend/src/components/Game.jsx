@@ -168,13 +168,28 @@ function Game({ gameObj, playerNumber, handleMainMenu }) {
                 </tr>
               </thead>
               <tbody>
-                {Array.from({ length: gameState.currentRound }).map((_, i) => (
-                  <tr key={i}>
-                    <td>{i + 1}</td>
-                    <td>{gameObj.players[1].score[i]}</td>
-                    <td>{gameObj.players[2].score[i]}</td>
-                  </tr>
-                ))}
+                {Array.from({ length: 5 }).map((_, i) => {
+                  if (
+                    gameObj.players[1].score[i] != null &&
+                    gameObj.players[2].score[i] != null
+                  ) {
+                    return (
+                      <tr key={i}>
+                        <td>{i + 1}</td>
+                        <td>{gameObj.players[1].score[i]}</td>
+                        <td>{gameObj.players[2].score[i]}</td>
+                      </tr>
+                    );
+                  } else {
+                    return (
+                      <tr key={i}>
+                        <td>{i + 1}</td>
+                        <td>-</td>
+                        <td>-</td>
+                      </tr>
+                    );
+                  }
+                })}
               </tbody>
             </table>
           </div>
