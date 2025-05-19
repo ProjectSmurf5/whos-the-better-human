@@ -6,7 +6,7 @@ import GameOver from "./GameOver";
 import { useState, useEffect } from "react";
 import { socket } from "../socket";
 
-function Game({ gameObj, playerNumber, handleMainMenu }) {
+function Game({ gameObj, playerNumber, handleMainMenu, setGameObj }) {
   const [winner, setWinner] = useState("");
   const [gameFinished, setGameFinished] = useState(false);
   const [roundRunning, setRoundRunning] = useState(false);
@@ -108,6 +108,9 @@ function Game({ gameObj, playerNumber, handleMainMenu }) {
 
   function onGameEnd(finalGameObj) {
     setGameFinished(true);
+    setGameObj(finalGameObj);
+    console.log("Game Ended: ", finalGameObj);
+
     function getPlayerAverage(playerNumber) {
       let total = 0;
       let playerScores = finalGameObj.players[playerNumber].score;
