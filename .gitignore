@@ -13,8 +13,9 @@
 # =========================
 
 backend/node_modules/
-backend/django-backend/venv/
+backend/venv
 db.sqlite3
+*.pyc
 
 
 # =========================
