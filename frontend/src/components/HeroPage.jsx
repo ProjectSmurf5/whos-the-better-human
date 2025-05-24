@@ -2,12 +2,18 @@
 import React from "react";
 import "./HeroPage.css";
 import logoImage from "../assets/wtbh-logo.png";
+import kingImage from "../assets/king.png";
+import { useState, useEffect } from "react";
 import { socket } from "../socket"; // Import the socket instance
 
-const HeroPage = ({ errorMessage, username, rank }) => {
+const HeroPage = ({ errorMessage, username, rank, validateUser }) => {
   console.log("username:", username);
   console.log("rank:", rank);
-  const [roomCode, setRoomCode] = React.useState("");
+  const [roomCode, setRoomCode] = useState("");
+
+  useEffect(() => {
+    validateUser(); // Call validateUser to check if the user is logged in
+  }, []);
 
   const handleCreateRoom = () => {
     console.log("Create Room button clicked");
@@ -28,6 +34,9 @@ const HeroPage = ({ errorMessage, username, rank }) => {
       </div>
 
       <div className="heroPage">
+        <button className="leaderboardButton" onClick={() => console.log("hi")}>
+          <img src={kingImage} alt="King" className="kingImage" />
+        </button>
         <img src={logoImage} alt="Logo" className="logo" />
         <h1 className="heroTitle">WHOSTHEBETTERHUMAN?</h1>
         <div className="heroButtons">

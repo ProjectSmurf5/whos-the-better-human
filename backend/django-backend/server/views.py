@@ -37,4 +37,7 @@ def signup(request):
 @authentication_classes([SessionAuthentication,TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def test_token(request):
-    return Response("passed for {}".format(request.user.username), status=status.HTTP_200_OK)
+    # Return User and Rank data ONLY for the authenticated user
+    user = request.user
+    serializer = UserSerializer(instance=user)
+    return Response({"user": serializer.data}, status=status.HTTP_200_OK)
