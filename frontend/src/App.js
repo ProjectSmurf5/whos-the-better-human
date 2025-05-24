@@ -67,6 +67,27 @@ function AppRoutes() {
     });
   }, [navigate]);
 
+  function validateUser() {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setLoggedIn(true);
+
+      axios
+        .get(API_URL + "test_token", {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        })
+        .then((response) => {
+          console.log("Token is valid:", response.data);
+          setUser({
+            username: response.data.user.username,
+            rank: response.data.user.rank,
+          });
+        });
+    }
+  }
+
   // Function to handle returning to the main menu
   function handleMainMenu() {
     // Reset game-related state
@@ -157,6 +178,7 @@ function AppRoutes() {
                 errorMessage={errorMessage}
                 username={user.username}
                 rank={user.rank}
+                validateUser={validateUser}
               />
             ) : (
               <HeroLoginSignUp />

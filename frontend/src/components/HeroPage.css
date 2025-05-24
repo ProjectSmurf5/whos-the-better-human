@@ -80,7 +80,18 @@
   width: 100px;
   height: 100px;
   margin-bottom: 1rem;
+}
+
+.kingImage {
+  width: 25px;
+  height: 25px;
+  padding: 0.5rem;
   border: 2px dashed #1c3235;
+}
+
+.leaderboardButton {
+  border: transparent;
+  cursor: pointer;
 }
 
 .errorMessage {
