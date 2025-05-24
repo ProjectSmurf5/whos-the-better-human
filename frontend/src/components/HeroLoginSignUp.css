@@ -1,0 +1,9 @@
+.formButtons {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 200px;
+  border-radius: 1rem;
+}
