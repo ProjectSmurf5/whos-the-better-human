@@ -1,45 +1,31 @@
-.heroButtons {
+/* HeroPage.css */
+
+/* Add styles for the Navbar */
+.navbar {
+  position: fixed; /* Fixed position */
+  top: 0; /* Align to the top */
+  left: 0; /* Align to the left */
+  width: 100%; /* Full width */
+  background-color: #1c3235; /* Dark background like buttons */
+  color: white; /* White text */
+  padding: 2rem 2rem; /* Padding */
   display: flex;
-  flex-direction: row;
-  justify-content: space-evenly;
-  column-gap: 2rem;
-}
-.heroButton {
-  color: white;
-  border: transparent;
-  border-radius: 3rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  justify-content: space-between; /* Space out left and right content */
+  align-items: center;
   font-family: "Courier New", Courier, monospace;
   font-weight: 400;
-  box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
-  background-color: #0e191b;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+  z-index: 1000; /* Ensure it's above other content */
+  height: 40px; /* Fixed height for the navbar */
+  box-sizing: border-box; /* Include padding in the element's total width and height */
 }
-.heroTitle {
-  font-size: 2.5rem;
-  color: #0e191b;
-  text-align: center;
-  font-family: "Shrikhand", "Courier New", Courier, monospace;
-  font-weight: 400;
-  letter-spacing: 0.1rem;
+
+.navbar-left,
+.navbar-right {
+  font-size: 1.1rem;
 }
-.roomInputField {
-  width: 300px;
-  height: 30px;
-  color: #0e191b;
-  border: solid 2px #0e191b;
-  font-size: 18px;
-  padding-left: 1rem;
-  box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
-}
-.logo {
-  width: 100px;
-  height: 100px;
-  margin-bottom: 1rem;
-  border: 2px dashed #0e191b;
-}
+
+/* Adjust HeroPage to account for the fixed navbar height */
 .heroPage {
   display: flex;
   flex-direction: column;
@@ -47,6 +33,54 @@
   align-items: center;
   height: 100vh;
   background-color: #d2ab99;
+  padding-top: 60px; /* Add padding to prevent content from being hidden behind navbar */
+  box-sizing: border-box; /* Include padding in the element's total width and height */
+}
+
+.heroButtons {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  column-gap: 2rem;
+  align-items: center; /* Align items vertically in case of height differences */
+}
+.heroButton {
+  color: white;
+  border: transparent;
+  border-radius: 3rem;
+  padding: 0.75rem 1.5rem; /* Slightly increased padding for better feel */
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 400;
+  font-size: 1rem; /* Ensure consistent font size */
+  box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
+  background-color: #1c3235;
+  cursor: pointer; /* Add cursor pointer for better UX */
+}
+
+.heroTitle {
+  font-size: 2.5rem;
+  color: #1c3235;
+  text-align: center;
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-weight: 400;
+  letter-spacing: 0.1rem;
+}
+.roomInputField {
+  width: 300px;
+  height: 40px; /* Increased height to better match buttons */
+  color: #1c3235;
+  border: solid 2px #1c3235;
+  font-size: 1rem; /* Consistent font size */
+  padding-left: 1rem;
+  box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
+  border-radius: 0.3rem; /* Optional: slightly rounded corners for input */
+  box-sizing: border-box; /* Ensure padding and border are included in height */
+}
+.logo {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 1rem;
+  border: 2px dashed #1c3235;
 }
 
 .errorMessage {
