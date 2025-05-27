@@ -5,7 +5,7 @@ from django.dispatch import receiver
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    rank = models.IntegerField(default=0)
+    rank = models.IntegerField(default=1200)
 
     def __str__(self):
         return f"{self.user.username}'s profile"

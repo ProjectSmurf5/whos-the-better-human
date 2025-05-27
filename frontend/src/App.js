@@ -26,9 +26,14 @@ function AppRoutes() {
       currentRound: 0,
       numPlayers: 0,
       roundFinished: false,
+      result: {
+        winner: null,
+        loser: null,
+      },
     },
     players: {}, // Ensure players is initialized as an object
     playerNumberFromId: {},
+    playerNumberFromUsername: {},
     roomName: null,
   });
   const [user, setUser] = useState({
@@ -194,6 +199,7 @@ function AppRoutes() {
                 playerNumber={playerNumber}
                 handleMainMenu={handleMainMenu}
                 setGameObj={setGameObj}
+                username={user.username}
               />
             ) : (
               <Navigate to="/" replace />

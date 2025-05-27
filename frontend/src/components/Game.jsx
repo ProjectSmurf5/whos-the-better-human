@@ -3,15 +3,17 @@ import ReactionBox from "./ReactionBox";
 import ReadyButton from "./ReadyButton";
 import { generateRandom } from "../utils/functions";
 import GameOver from "./GameOver";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { socket } from "../socket";
+import axios from "axios";
 
-function Game({ gameObj, playerNumber, handleMainMenu, setGameObj }) {
-  const [winner, setWinner] = useState("");
+function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
+  const [result, setResult] = useState({ winner: "", loser: "" });
   const [gameFinished, setGameFinished] = useState(false);
   const [roundRunning, setRoundRunning] = useState(false);
   const [timer1Running, setTimer1Running] = useState(false);
   const [timer1AFKTimeout, setTimer1AFKTimeout] = useState();
+  const [eloGain, setEloGain] = useState(0);
 
   const [timerTwoStartStamp, setTimerTwoStartStamp] = useState();
   const [timerTwoAFKTimeout, setTimerTwoAFKTimeout] = useState();
@@ -19,6 +21,7 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj }) {
   const [clickedReady, setClickedReady] = useState(false);
 
   const gameState = gameObj.state;
+  const API_URL = "http://localhost:8000/";
 
   function readyHandler() {
     if (clickedReady) return;
@@ -110,34 +113,16 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj }) {
     setGameFinished(true);
     setGameObj(finalGameObj);
     console.log("Game Ended: ", finalGameObj);
-
-    function getPlayerAverage(playerNumber) {
-      let total = 0;
-      let playerScores = finalGameObj.players[playerNumber].score;
-      for (let i = 0; i < playerScores.length; i++) {
-        total += playerScores[i];
-      }
-      console.log(`Player ${playerNumber} Total: ${total}`);
-      return total / finalGameObj.state.currentRound;
-    }
-
-    let player1Average = getPlayerAverage(1);
-    let player2Average = getPlayerAverage(2);
-    console.log(`Player 1 Average: ${player1Average}`);
-    console.log(`Player 2 Average: ${player2Average}`);
-    if (player1Average < player2Average) {
-      setWinner("Player 1");
-    } else if (player1Average > player2Average) {
-      setWinner("Player 2");
-    } else {
-      setWinner("Draw");
-    }
   }
 
   return (
     <div className="Game">
       {gameFinished ? (
-        <GameOver winner={winner} handleMainMenu={handleMainMenu} />
+        <GameOver
+          winner={gameObj.state.result.winner}
+          handleMainMenu={handleMainMenu}
+          eloDifference={gameObj.players[playerNumber].eloDiff}
+        />
       ) : null}
       <div className="nav-container">
         {/* <h2>You are player {playerNumber}</h2> */}

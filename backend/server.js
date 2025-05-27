@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const http = require("http");
 const { Server } = require("socket.io");
+const axios = require("axios");
 
 const PORT = process.env.PORT || 4000;
 
@@ -20,6 +21,7 @@ const { makeid } = require("./utils");
 
 // SERVER WIDE SETTINGS
 const NUMBEROFROUNDS = 5;
+const API_URL = "http://127.0.0.1:8000/"; // Using explicit IPv4 address
 
 /*
 game is a dictionary with the keys as the roomNumbers
@@ -33,11 +35,16 @@ let newGameObj = (roomName) => {
     state: {
       playersReady: 0,
       currentRound: 0,
-      numPlayers: 0,
+      numPlayers: 1,
       roundFinished: false,
+      result: {
+        winner: null,
+        loser: null,
+      },
     },
     players: {},
     playerNumberFromId: {},
+    playerNumberFromUsername: {},
     roomName: roomName,
   };
 };
@@ -46,6 +53,8 @@ let newPlayerObj = () => {
   return {
     score: [],
     isReady: false,
+    username: null,
+    eloDiff: 0,
   };
 };
 
@@ -62,7 +71,7 @@ io.on("connect", (socket) => {
   socket.on("player-score", handlePlayerScore);
   // socket.on("disconnect", handleDisconnect);
 
-  function handleJoinRoom(roomName) {
+  function handleJoinRoom(roomName, username) {
     if (!roomName) {
       socket.emit("unknownCode");
       return;
@@ -99,13 +108,16 @@ io.on("connect", (socket) => {
 
     currentGame.playerNumberFromId[socket.id] = thisPlayerId;
     currentGame.players[thisPlayerId] = newPlayerObj();
+    currentGame.players[thisPlayerId].username = username;
+    currentGame.playerNumberFromUsername[username] = thisPlayerId;
+    currentGame.state.numPlayers += 1;
 
     socket.emit("player-number", thisPlayerId);
 
     socket.emit("game-update", currentGame);
   }
 
-  function handleNewRoom() {
+  function handleNewRoom(username) {
     console.log("Handling new room");
     const roomName = makeid(5);
     socketRooms[socket.id] = roomName;
@@ -118,7 +130,9 @@ io.on("connect", (socket) => {
 
     thisGameObj.players[1] = newPlayerObj();
     thisGameObj.playerNumberFromId[socket.id] = 1;
+    thisGameObj.playerNumberFromUsername[username] = 1;
     thisGameObj.roomName = roomName;
+    thisGameObj.players[1].username = username;
 
     socket.emit("player-number", 1);
 
@@ -176,11 +190,87 @@ io.on("connect", (socket) => {
     ) {
       console.log("Both players have submitted scores!");
       if (currentGame.state.currentRound >= NUMBEROFROUNDS) {
-        console.log("Game Over!");
-        io.in(socketRooms[socket.id]).emit("game-end", {
-          playerNumber: thisPlayerId,
-          game: currentGame,
-        });
+        function getPlayerAverage(playerNumber) {
+          let total = 0;
+          let playerScores = currentGame.players[playerNumber].score;
+          for (let i = 0; i < playerScores.length; i++) {
+            total += playerScores[i];
+          }
+          console.log(`Player ${playerNumber} Total: ${total}`);
+          return total / currentGame.state.currentRound;
+        }
+        const player1Average = getPlayerAverage(1);
+        const player2Average = getPlayerAverage(2);
+        console.log(`Player 1 Average: ${player1Average}`);
+        console.log(`Player 2 Average: ${player2Average}`);
+        if (player1Average < player2Average) {
+          currentGame.state.result.winner = `${currentGame.players[1].username}`;
+          currentGame.state.result.loser = `${currentGame.players[2].username}`;
+        } else if (player1Average > player2Average) {
+          currentGame.state.result.winner = `${currentGame.players[2].username}`;
+          currentGame.state.result.loser = `${currentGame.players[1].username}`;
+        } else {
+          currentGame.state.result.winner = "Draw";
+          currentGame.state.result.loser = "Draw";
+        }
+        console.log("Sending data to update_rank:", currentGame.state.result);
+        axios
+          .post(API_URL + "update_rank", currentGame.state.result)
+          .then((response) => {
+            console.log("Rank updated successfully:", response.data);
+            console.log(
+              "Winner player number:",
+              currentGame.playerNumberFromUsername[
+                response.data.winner.username
+              ]
+            );
+            console.log(
+              "Loser player number:",
+              currentGame.playerNumberFromUsername[response.data.loser.username]
+            );
+            const winnerPlayerNumber =
+              currentGame.playerNumberFromUsername[
+                response.data.winner.username
+              ];
+            const loserPlayerNumber =
+              currentGame.playerNumberFromUsername[
+                response.data.loser.username
+              ];
+
+            if (winnerPlayerNumber && currentGame.players[winnerPlayerNumber]) {
+              currentGame.players[winnerPlayerNumber].eloDiff =
+                response.data.winner.rank_diff;
+            }
+            if (loserPlayerNumber && currentGame.players[loserPlayerNumber]) {
+              currentGame.players[loserPlayerNumber].eloDiff =
+                response.data.loser.rank_diff;
+            }
+
+            // Log the updated game state
+            console.log("Updated game state:", {
+              player1: currentGame.players[1]
+                ? currentGame.players[1].eloDiff
+                : "no player 1",
+              player2: currentGame.players[2]
+                ? currentGame.players[2].eloDiff
+                : "no player 2",
+            });
+
+            console.log("Game Over!");
+            io.in(socketRooms[socket.id]).emit("game-end", {
+              playerNumber: thisPlayerId,
+              game: currentGame,
+            });
+          })
+          .catch((error) => {
+            console.error("Error updating rank:", error);
+            // Even if there's an error updating rank, we should still end the game
+            console.log("Game Over (with error)!");
+            io.in(socketRooms[socket.id]).emit("game-end", {
+              playerNumber: thisPlayerId,
+              game: currentGame,
+            });
+          });
         return;
       }
       currentGame.state.roundFinished = true;

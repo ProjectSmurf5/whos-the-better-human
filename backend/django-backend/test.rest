@@ -2,7 +2,7 @@ POST http://127.0.0.1:8000/login
 Content-Type: application/json
 
 {
-  "username": "test",
+  "username": "test13",
   "password": "test1234"
 }
 
@@ -12,7 +12,7 @@ POST http://127.0.0.1:8000/signup
 Content-Type: application/json
 
 {
-  "username": "test",
+  "username": "test13",
   "password": "test1234"
 }
 
@@ -20,5 +20,24 @@ Content-Type: application/json
 
 GET http://127.0.0.1:8000/test_token
 Content-Type: application/json
+Authorization: Token 6173eb0d5cbbc220930e87ca7ede3aca108aa8c4
 
 {}
+
+###
+
+POST http://127.0.0.1:8000/update_rank
+Content-Type: application/json
+
+{
+  "winner": "test123",
+  "loser": "test13"
+}
+
+###
+
+GET http://127.0.0.1:8000/leaderboard
+Content-Type: application/json
+
+{}
+
