@@ -17,12 +17,12 @@ const HeroPage = ({ errorMessage, username, rank, validateUser }) => {
 
   const handleCreateRoom = () => {
     console.log("Create Room button clicked");
-    socket.emit("create-room");
+    socket.emit("create-room", username);
   };
 
   const handleJoinRoom = () => {
     console.log("Join Room button clicked");
-    socket.emit("join-room", roomCode);
+    socket.emit("join-room", roomCode, username);
   };
 
   return (
