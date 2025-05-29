@@ -4,6 +4,7 @@ import HeroPage from "./components/HeroPage";
 import HeroLoginSignUp from "./components/HeroLoginSignUp";
 import SignUp from "./components/SignUp";
 import Login from "./components/Login";
+import Leaderboard from "./components/Leaderboard";
 import React, { useEffect, useState } from "react"; // Imported React for JSX
 import { socket } from "./socket";
 import axios from "axios";
@@ -40,6 +41,7 @@ function AppRoutes() {
     username: "",
     rank: "",
   });
+  const [leaderboard, setLeaderboard] = useState([]);
   const [playerNumber, setPlayerNumber] = useState(null);
   const [loggedIn, setLoggedIn] = useState(
     localStorage.getItem("token") !== null
@@ -93,6 +95,13 @@ function AppRoutes() {
     }
   }
 
+  function getLeaderboard() {
+    axios.get(API_URL + "leaderboard").then((response) => {
+      console.log("Leaderboard received:", response.data);
+      setLeaderboard(response.data);
+    });
+  }
+
   // Function to handle returning to the main menu
   function handleMainMenu() {
     // Reset game-related state
@@ -114,6 +123,10 @@ function AppRoutes() {
     if (window.location.pathname !== "/") {
       navigate("/");
     }
+  }
+
+  function leaderboardHandler() {
+    navigate("/leaderboard");
   }
 
   function handleLogin(e, username, password) {
@@ -184,6 +197,7 @@ function AppRoutes() {
                 username={user.username}
                 rank={user.rank}
                 validateUser={validateUser}
+                leaderboardHandler={leaderboardHandler}
               />
             ) : (
               <HeroLoginSignUp />
@@ -211,6 +225,15 @@ function AppRoutes() {
           element={<SignUp handleSignIn={handleSignIn} />}
         />
         <Route path="/login" element={<Login handleLogin={handleLogin} />} />
+        <Route
+          path="/leaderboard"
+          element={
+            <Leaderboard
+              leaderboard={leaderboard}
+              getLeaderboard={getLeaderboard}
+            />
+          }
+        />
       </Routes>
     </div>
   );

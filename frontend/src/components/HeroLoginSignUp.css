@@ -4,6 +4,15 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 200px;
+  max-width: 300px;
   border-radius: 1rem;
+  column-gap: 2rem;
+}
+
+.formButtons button {
+  min-width: 120px;
+}
+
+.formButtons button:first-child {
+  min-width: 140px;
 }

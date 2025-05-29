@@ -77,7 +77,7 @@ def update_rank(request):
     }, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-def leaderboardView(request):
+def leaderboard(request):
     users = UserProfile.objects.all().order_by('-rank')
     serializer = UserProfileSerializer(users, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)

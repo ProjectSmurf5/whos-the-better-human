@@ -6,7 +6,13 @@ import kingImage from "../assets/king.png";
 import { useState, useEffect } from "react";
 import { socket } from "../socket"; // Import the socket instance
 
-const HeroPage = ({ errorMessage, username, rank, validateUser }) => {
+const HeroPage = ({
+  errorMessage,
+  username,
+  rank,
+  validateUser,
+  leaderboardHandler,
+}) => {
   console.log("username:", username);
   console.log("rank:", rank);
   const [roomCode, setRoomCode] = useState("");
@@ -25,6 +31,11 @@ const HeroPage = ({ errorMessage, username, rank, validateUser }) => {
     socket.emit("join-room", roomCode, username);
   };
 
+  const handleLeaderboard = () => {
+    console.log("Leaderboard button clicked");
+    leaderboardHandler();
+  };
+
   return (
     <>
       {/* Navbar */}
@@ -34,7 +45,7 @@ const HeroPage = ({ errorMessage, username, rank, validateUser }) => {
       </div>
 
       <div className="heroPage">
-        <button className="leaderboardButton" onClick={() => console.log("hi")}>
+        <button className="leaderboardButton" onClick={handleLeaderboard}>
           <img src={kingImage} alt="King" className="kingImage" />
         </button>
         <img src={logoImage} alt="Logo" className="logo" />

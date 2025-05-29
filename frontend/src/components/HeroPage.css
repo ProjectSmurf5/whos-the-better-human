@@ -44,17 +44,9 @@
   column-gap: 2rem;
   align-items: center; /* Align items vertically in case of height differences */
 }
+
 .heroButton {
-  color: white;
-  border: transparent;
   border-radius: 3rem;
-  padding: 0.75rem 1.5rem; /* Slightly increased padding for better feel */
-  font-family: "Courier New", Courier, monospace;
-  font-weight: 400;
-  font-size: 1rem; /* Ensure consistent font size */
-  box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
-  background-color: #1c3235;
-  cursor: pointer; /* Add cursor pointer for better UX */
 }
 
 .heroTitle {
@@ -65,6 +57,7 @@
   font-weight: 400;
   letter-spacing: 0.1rem;
 }
+
 .roomInputField {
   width: 300px;
   height: 40px; /* Increased height to better match buttons */
@@ -76,6 +69,7 @@
   border-radius: 0.3rem; /* Optional: slightly rounded corners for input */
   box-sizing: border-box; /* Ensure padding and border are included in height */
 }
+
 .logo {
   width: 100px;
   height: 100px;
@@ -92,6 +86,13 @@
 .leaderboardButton {
   border: transparent;
   cursor: pointer;
+  background: none;
+  box-shadow: none;
+}
+
+.leaderboardButton:hover {
+  transform: none;
+  background: none;
 }
 
 .errorMessage {
