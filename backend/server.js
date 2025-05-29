@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 const axios = require("axios");
 
 const PORT = process.env.PORT || 4000;
+const API_URL = process.env.DJANGO_API_URL || "http://127.0.0.1:8000/";
 
 // Create HTTP server and wrap Express app
 const server = http.createServer(app);
@@ -12,7 +13,10 @@ const server = http.createServer(app);
 // Attach socket.io to the server
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin:
+      process.env.NODE_ENV === "production"
+        ? ["https://your-frontend-app.onrender.com"] // Update with your frontend URL
+        : "*",
     methods: ["GET", "POST"],
   },
 });
@@ -21,7 +25,6 @@ const { makeid } = require("./utils");
 
 // SERVER WIDE SETTINGS
 const NUMBEROFROUNDS = 5;
-const API_URL = "http://127.0.0.1:8000/"; // Using explicit IPv4 address
 
 /*
 game is a dictionary with the keys as the roomNumbers

@@ -16,6 +16,9 @@ backend/node_modules/
 backend/venv
 db.sqlite3
 *.pyc
+backend/django-backend/server/migrations/
+backend/django-backend/staticfiles/
+backend/django-backend/.env
 
 
 # =========================

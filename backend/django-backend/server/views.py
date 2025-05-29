@@ -1,5 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.views.decorators.csrf import csrf_exempt
 
 from .serializers import UserSerializer
 from .serializers import UserProfileSerializer
@@ -15,6 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
 @api_view(['POST'])
+@csrf_exempt
 def login(request):
     user = get_object_or_404(User, username=request.data['username'])
     if not user.check_password(request.data['password']):
@@ -24,6 +26,7 @@ def login(request):
     return Response({"token": token.key, "user": serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+@csrf_exempt
 def signup(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
@@ -36,8 +39,9 @@ def signup(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-@authentication_classes([SessionAuthentication,TokenAuthentication])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def test_token(request):
     # Return User 
     user = request.user
@@ -55,6 +59,7 @@ def calculate_rank(winnerRank, loserRank, k=32):
     return new_winner_rank, new_loser_rank
 
 @api_view(['POST'])
+@csrf_exempt
 def update_rank(request):
     winner_username = request.data.get('winner')
     loser_username = request.data.get('loser')
