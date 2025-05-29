@@ -73,17 +73,17 @@ io.on("connect", (socket) => {
 
   function handleJoinRoom(roomName, username) {
     if (!roomName) {
+      console.log("[Debug] Join Room: No room name provided");
       socket.emit("unknownCode");
       return;
     }
-    //room is a set
-    const room = io.sockets.adapter.rooms.get(roomName);
 
-    //get the size of the room if its a thing
-    let numsockets;
-    if (room) {
-      numsockets = room.size;
-    }
+    const room = io.sockets.adapter.rooms.get(roomName);
+    let numsockets = room ? room.size : 0;
+
+    console.log(
+      `[Debug] Join Room: Room ${roomName} exists with ${numsockets} socket(s)`
+    );
 
     if (!room || numsockets === 0) {
       socket.emit("unknownCode");
@@ -93,50 +93,86 @@ io.on("connect", (socket) => {
       return;
     }
 
-    console.log(`Socket joining room: ${roomName}`);
-
-    socketRooms[socket.id] = roomName;
+    // Join the room first
     socket.join(roomName);
+    console.log(`[Debug] Socket ${socket.id} joined room ${roomName}`);
 
-    //find the lowest free player id
+    // Update room tracking
+    socketRooms[socket.id] = roomName;
+    const currentGame = getGameObjFromRoom[roomName];
+
+    // Find available player slot
     let thisPlayerId = 1;
-    while (getGameObjFromRoom[roomName].players[thisPlayerId] != null) {
+    while (currentGame.players[thisPlayerId] != null) {
       thisPlayerId += 1;
     }
 
-    const currentGame = getGameObjFromRoom[socketRooms[socket.id]];
-
+    // Set up player data
     currentGame.playerNumberFromId[socket.id] = thisPlayerId;
     currentGame.players[thisPlayerId] = newPlayerObj();
     currentGame.players[thisPlayerId].username = username;
     currentGame.playerNumberFromUsername[username] = thisPlayerId;
     currentGame.state.numPlayers += 1;
 
+    // Send initial game state
     socket.emit("player-number", thisPlayerId);
-
     socket.emit("game-update", currentGame);
+
+    // Wait a brief moment to ensure socket has joined room
+    setTimeout(() => {
+      // Emit player join event to the room
+      const messageData = {
+        user: "System",
+        message: `${username} has joined the room!`,
+      };
+      console.log(
+        `[Debug] Emitting player-event to room ${roomName}:`,
+        messageData
+      );
+
+      // Broadcast to all sockets in the room
+      io.in(roomName).emit("player-event", messageData);
+    }, 100);
   }
 
   function handleNewRoom(username) {
-    console.log("Handling new room");
+    console.log("[Debug] Creating new room");
     const roomName = makeid(5);
-    socketRooms[socket.id] = roomName;
+
+    // Join the room first
     socket.join(roomName);
+    console.log(`[Debug] Socket ${socket.id} joined room ${roomName}`);
 
-    console.log(`Creating new room: ${roomName}`);
-
+    // Update room tracking
+    socketRooms[socket.id] = roomName;
     getGameObjFromRoom[roomName] = newGameObj(roomName);
-    thisGameObj = getGameObjFromRoom[roomName];
+    const thisGameObj = getGameObjFromRoom[roomName];
 
+    // Set up player data
     thisGameObj.players[1] = newPlayerObj();
     thisGameObj.playerNumberFromId[socket.id] = 1;
     thisGameObj.playerNumberFromUsername[username] = 1;
     thisGameObj.roomName = roomName;
     thisGameObj.players[1].username = username;
 
+    // Send initial game state
     socket.emit("player-number", 1);
-
     socket.emit("game-update", thisGameObj);
+
+    // Wait a brief moment to ensure socket has joined room
+    setTimeout(() => {
+      // Emit room creation event
+      const messageData = {
+        user: "System",
+        message: `${username} has created the room!`,
+      };
+      console.log(
+        `[Debug] Emitting player-event to room ${roomName}:`,
+        messageData
+      );
+      // Emit to the specific socket
+      socket.emit("player-event", messageData);
+    }, 100);
   }
 
   function handlePlayerReady() {
