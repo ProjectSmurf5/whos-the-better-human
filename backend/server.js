@@ -3,9 +3,25 @@ const app = express();
 const http = require("http");
 const { Server } = require("socket.io");
 const axios = require("axios");
+const cors = require("cors");
+require("dotenv").config();
 
 const PORT = process.env.PORT || 4000;
 const API_URL = process.env.DJANGO_API_URL || "http://127.0.0.1:8000/";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const NODE_ENV = process.env.NODE_ENV || "development";
+
+// Enable CORS for Express routes
+app.use(
+  cors({
+    origin:
+      NODE_ENV === "production"
+        ? ["https://whos-the-better-human-v83v.onrender.com"]
+        : "*",
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 
 // Create HTTP server and wrap Express app
 const server = http.createServer(app);
@@ -14,10 +30,11 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin:
-      process.env.NODE_ENV === "production"
-        ? ["https://your-frontend-app.onrender.com"] // Update with your frontend URL
+      NODE_ENV === "production"
+        ? ["https://whos-the-better-human-v83v.onrender.com"]
         : "*",
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
