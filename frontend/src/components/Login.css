@@ -1,0 +1,21 @@
+.login-container {
+  display: flex;
+  flex-direction: column;
+  border: 3px dashed #1c3235;
+  padding: 1rem;
+  row-gap: 1rem;
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  row-gap: 1rem;
+}
+.form-group input {
+  border: 3px solid #1c3235;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  margin-top: 0.5rem;
+}
+.login-form button {
+  border-radius: 1rem;
+}

@@ -1,0 +1,122 @@
+.leaderboard-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6rem 2rem 2rem 2rem;
+  min-height: 100vh;
+  background-color: #d2ab99;
+  position: relative;
+}
+
+.back-button {
+  margin-top: 2rem;
+}
+
+.leaderboard-title {
+  font-size: 2.5rem;
+  color: #1c3235;
+  text-align: center;
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-weight: 400;
+  letter-spacing: 0.1rem;
+  margin-bottom: 2rem;
+}
+
+.leaderboard-table-container {
+  width: 100%;
+  max-width: 800px;
+  background-color: #d2ab99;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
+  border: 3px solid #1c3235;
+}
+
+.table-scroll-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 4px;
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  width: 12px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: #d2ab99;
+  border-radius: 4px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background-color: #1c3235;
+  border-radius: 4px;
+  border: 3px solid #d2ab99;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #c08972;
+  border: 3px solid #1c3235;
+}
+
+.leaderboard-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  padding: 1rem;
+  text-align: center;
+  font-family: "Courier New", Courier, monospace;
+  border: 1px solid #1c3235;
+}
+
+.leaderboard-table th {
+  background-color: #1c3235;
+  color: white;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.leaderboard-table td {
+  color: #1c3235;
+  font-size: 1rem;
+}
+
+.leaderboard-table tbody tr:nth-child(even) {
+  background-color: #cca18e;
+}
+
+.leaderboard-table tbody tr:hover {
+  background-color: #e0b5a3;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .leaderboard-container {
+    padding: 5rem 1rem 1rem 1rem;
+  }
+
+  .back-button {
+    margin-top: 1.5rem;
+    padding: 0.4rem 1.2rem;
+    font-size: 1rem;
+  }
+
+  .leaderboard-title {
+    font-size: 2rem;
+  }
+
+  .leaderboard-table th,
+  .leaderboard-table td {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .table-scroll-container {
+    max-height: 300px;
+  }
+}

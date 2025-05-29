@@ -1,6 +1,5 @@
 .Game {
   flex: 1;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -28,41 +27,43 @@
   min-height: 4rem;
 }
 
-.nav-container .nav-item { /* Target h2 elements with the class */
+.nav-container .nav-item {
+  /* Target h2 elements with the class */
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  margin: 0; 
+  margin: 0;
   white-space: nowrap;
 }
 
 .nav-container .nav-item:first-of-type {
-  left: 2rem; 
+  left: 2rem;
   text-align: left;
 }
 
 .nav-container .nav-item:last-of-type {
-  right: 2rem; 
+  right: 2rem;
   text-align: right;
 }
 
 .nav-container h1 {
-  flex-grow: 1; 
-  text-align: center; 
-  font-size: 2rem; 
+  flex-grow: 1;
+  text-align: center;
+  font-size: 2rem;
   font-family: "Shrikhand", "Courier New", Courier, monospace;
   font-weight: 400;
   letter-spacing: 0.1rem;
+  color: #1c3235;
   margin: 0; /* Reset margin */
-} 
+}
 
 .reaction-box {
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  width: 600px;
-  height: 600px;
+  width: 500px;
+  height: 500px;
 }
 
 .timer-containers {
@@ -80,25 +81,186 @@
 }
 
 .table-container th {
-  background-color: #d2ab99;
-  color: #000;
-  font-size: 1.5rem;
+  color: black;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 400;
+  font-size: 1rem;
   padding: 1rem;
   text-align: center;
 }
 
 .table-container td {
   color: #000;
-  font-size: 1.5rem;
-  padding: 0.5rem;
+  font-size: 1.25rem;
   text-align: center;
+  padding: 1rem;
+}
+.table-container tr:nth-child(even) {
+  background-color: #cca18e;
 }
 
 .table-container table {
+  border: 3px solid black;
+  overflow: hidden;
   width: 100%;
   border-collapse: collapse;
-  margin-top: 2rem;
   font-family: "Courier New", Courier, monospace;
-  box-shadow:  0 2px 5px rgba(0, 0, 0, 0.2);
-  
+}
+
+.table-container {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.side-interface-container {
+  position: fixed;
+  top: 5rem;
+  right: 0;
+  width: 350px;
+  height: 100%;
+  background-color: #d2ab99;
+  color: white;
+  /* Make the container below the nav */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.chat-container {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border-bottom: 3px solid black;
+  border-right: 3px solid black;
+  border-left: 3px solid black;
+  background-color: #c08972;
+}
+
+.chat-box {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  color: black;
+  font-size: 1rem;
+  font-family: "Courier New", Courier, monospace;
+  min-height: 200px;
+}
+
+.chat-message {
+  margin-bottom: 0.5rem;
+  word-wrap: break-word;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.chat-user {
+  font-weight: bold;
+  color: #333;
+}
+
+.chat-text {
+  color: #000;
+}
+
+.chat-empty {
+  color: #666;
+  text-align: center;
+  font-style: italic;
+}
+
+.chat-header {
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  box-sizing: border-box;
+  font-size: 0.75rem;
+  margin-bottom: 1rem;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 100;
+  text-align: left;
+}
+
+.round-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row;
+  padding: 1rem;
+}
+
+@media (max-width: 1194px) {
+  /* Make NavBar smaller */
+  .nav-container {
+    padding: 0.5rem;
+  }
+  .nav-container .nav-item {
+    font-size: 1rem;
+  }
+  .nav-container .nav-item:first-of-type {
+    left: 1rem;
+  }
+  .nav-container .nav-item:last-of-type {
+    right: 1rem;
+  }
+  /* Make the side interface smaller */
+  .side-interface-container {
+    width: 250px;
+    top: 4rem;
+  }
+  /* Make the table smaller */
+  .table-container {
+    width: 250px;
+  }
+  .table-container th {
+    font-size: 0.75rem;
+  }
+  .table-container td {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 800px) {
+  /* Make the side interface On top */
+  .side-interface-container {
+    width: 100%;
+    top: 0;
+    height: auto;
+    position: static;
+  }
+  /* Make the table smaller */
+  .table-container {
+    width: 100%;
+  }
+  /* Make the navigation bar vertical and smaller */
+  .nav-container {
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+  }
+  .nav-container .nav-item {
+    position: static;
+    transform: none;
+    text-align: center;
+  }
+  .nav-container h1 {
+    font-size: 1.5rem;
+  }
+  /* Make the Round Info smaller */
+  .round-container {
+    width: 100%;
+    padding: 0.5rem;
+  }
+  .round-container h1 {
+    font-size: 1.5rem;
+  }
+  .round-container h2 {
+    font-size: 1rem;
+  }
 }
