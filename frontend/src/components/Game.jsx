@@ -22,7 +22,8 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
   const [clickedReady, setClickedReady] = useState(false);
 
   const gameState = gameObj.state;
-  const API_URL = "http://localhost:8000/";
+  const API_URL =
+    process.env.REACT_APP_DJANGO_API_URL || "http://localhost:8000/";
 
   function readyHandler() {
     if (clickedReady) return;

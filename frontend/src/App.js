@@ -17,7 +17,8 @@ import {
 } from "react-router-dom";
 
 function AppRoutes() {
-  const API_URL = "http://localhost:8000/";
+  const API_URL =
+    process.env.REACT_APP_DJANGO_API_URL || "http://localhost:8000/";
   const navigate = useNavigate();
 
   // State for the game object, player number, and error messages
