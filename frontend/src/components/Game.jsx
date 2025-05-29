@@ -14,6 +14,7 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
   const [timer1Running, setTimer1Running] = useState(false);
   const [timer1AFKTimeout, setTimer1AFKTimeout] = useState();
   const [eloGain, setEloGain] = useState(0);
+  const [chatMessages, setChatMessages] = useState([]);
 
   const [timerTwoStartStamp, setTimerTwoStartStamp] = useState();
   const [timerTwoAFKTimeout, setTimerTwoAFKTimeout] = useState();
@@ -61,12 +62,52 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
 
   // Listener UseEffect
   useEffect(() => {
+    console.log("[Debug] Game component mounted");
+
     socket.on("next-round", onRoundStart);
     socket.on("game-end", (gameEndData) => {
       console.log("Game Ended: ", gameEndData);
       onGameEnd(gameEndData.game);
     });
+
+    // Add chat message handler
+    socket.on("chat", (messageData) => {
+      console.log("[Chat Debug] Received chat message:", messageData);
+      setChatMessages((prevMessages) => {
+        const newMessages = [...prevMessages, messageData];
+        console.log("[Chat Debug] Updated messages:", newMessages);
+        return newMessages;
+      });
+    });
+
+    // Add join/leave message handler
+    socket.on("player-event", (messageData) => {
+      console.log("[Chat Debug] Received player event:", messageData);
+      setChatMessages((prevMessages) => {
+        const newMessages = [...prevMessages, messageData];
+        console.log("[Chat Debug] Updated messages:", newMessages);
+        return newMessages;
+      });
+    });
+
+    // Log initial socket connection status
+    console.log("[Debug] Socket connected:", socket.connected);
+    console.log("[Debug] Current room:", gameObj.roomName);
+
+    // Cleanup function to remove event listeners
+    return () => {
+      console.log("[Debug] Game component unmounting");
+      socket.off("next-round");
+      socket.off("game-end");
+      socket.off("chat");
+      socket.off("player-event");
+    };
   }, []);
+
+  // Add effect to log chat messages changes
+  useEffect(() => {
+    console.log("[Chat Debug] Chat messages updated:", chatMessages);
+  }, [chatMessages]);
 
   // Timer 1
   function onRoundStart() {
@@ -184,7 +225,16 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
         }
         <div className="chat-container">
           <div className="chat-box">
-            <p>Player 1 Joined.</p>
+            {chatMessages.length === 0 ? (
+              <p className="chat-empty">No messages yet</p>
+            ) : (
+              chatMessages.map((msg, index) => (
+                <div key={index} className="chat-message">
+                  <span className="chat-user">{msg.user}: </span>
+                  <span className="chat-text">{msg.message}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
