@@ -18,12 +18,4 @@
 }
 .signup-form button {
   border-radius: 1rem;
-  border: none;
-  color: white;
-  font-family: "Shrikhand", "Courier New", Courier, monospace;
-  letter-spacing: 0.1rem;
-  background-color: #1c3235;
-  padding: 0.5rem;
-  font-weight: 400;
-  box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
 }

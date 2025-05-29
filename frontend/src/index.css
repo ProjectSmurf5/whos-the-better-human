@@ -19,6 +19,54 @@ button {
   align-items: center;
 }
 
+/* Common button styles */
+button {
+  padding: 0.5rem 1.5rem;
+  font-size: 1.1rem;
+  background-color: #1c3235;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Courier New", Courier, monospace;
+  border: 2px solid #1c3235;
+  box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background-color: #2a4649;
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+  box-shadow: -1px 3px 0px 1px rgba(0, 0, 0, 0.6);
+}
+
+/* Special button variants */
+button.hero-button {
+  border-radius: 3rem;
+}
+
+button.game-button {
+  width: 200px;
+  height: 50px;
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+  button {
+    padding: 0.4rem 1.2rem;
+    font-size: 1rem;
+  }
+
+  button.game-button {
+    width: 150px;
+    height: 40px;
+  }
+}
+
 h1 {
   text-align: center;
   margin-bottom: 0.5em;
