@@ -3,8 +3,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-evenly;
-  padding-top: 6rem;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding-top: 5rem;
+  box-sizing: border-box;
+}
+
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  max-width: calc(100% - 350px);
+  padding: 1rem;
+  box-sizing: border-box;
+  transition: max-width 0.3s ease;
+}
+
+.game-container.full-width {
+  max-width: 100%;
 }
 
 .main-container {
@@ -16,45 +35,69 @@
   top: 0;
   left: 0;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
   background-color: #d2ab99;
-  padding: 1rem;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   box-sizing: border-box;
+  height: 4rem;
+}
+
+.nav-left {
+  flex: 1;
   display: flex;
-  justify-content: center;
-  text-align: center;
-  min-height: 4rem;
+  align-items: center;
+  padding-left: 2rem;
 }
 
-.nav-container .nav-item {
-  /* Target h2 elements with the class */
+.nav-right {
+  display: flex;
+  align-items: flex-start;
+  height: 100%;
+  padding-right: 2rem;
+}
+
+.nav-center {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  margin: 0;
-  white-space: nowrap;
-}
-
-.nav-container .nav-item:first-of-type {
-  left: 2rem;
-  text-align: left;
-}
-
-.nav-container .nav-item:last-of-type {
-  right: 2rem;
-  text-align: right;
-}
-
-.nav-container h1 {
-  flex-grow: 1;
+  left: 50%;
+  transform: translateX(-50%);
   text-align: center;
-  font-size: 2rem;
-  font-family: "Shrikhand", "Courier New", Courier, monospace;
-  font-weight: 400;
-  letter-spacing: 0.1rem;
+}
+
+.nav-center h1 {
+  margin: 0;
+  font-family: "Shrikhand", Courier, monospace;
+  font-size: 1.8rem;
   color: #1c3235;
-  margin: 0; /* Reset margin */
+  font-weight: bold;
+}
+
+.room-name {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 1.5rem;
+  color: #1c3235;
+  font-weight: bold;
+}
+
+.dropdown-button {
+  background: #1c3235;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  font-family: "Courier New", Courier, monospace;
+  align-self: center;
+}
+
+.dropdown-button:hover {
+  background: #2a4a4f;
+  transform: scale(1.05);
 }
 
 .reaction-box {
@@ -62,8 +105,9 @@
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  width: 500px;
-  height: 500px;
+  width: min(500px, 90vw);
+  height: min(500px, 90vw);
+  margin: 1rem 0;
 }
 
 .timer-containers {
@@ -117,29 +161,47 @@
 
 .side-interface-container {
   position: fixed;
-  top: 5rem;
+  top: 4rem;
   right: 0;
   width: 350px;
   height: 100%;
   background-color: #d2ab99;
   color: white;
-  /* Make the container below the nav */
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
+  transition: transform 0.3s ease;
 }
 
 .chat-container {
   width: 100%;
-  height: 100%;
+  height: calc(100vh - 4rem - 250px);
   overflow-y: auto;
   box-sizing: border-box;
   border-bottom: 3px solid black;
   border-right: 3px solid black;
   border-left: 3px solid black;
   background-color: #c08972;
+  scrollbar-width: thin;
+  scrollbar-color: #1c3235 #d2ab99;
+}
+
+/* Webkit browsers custom scrollbar */
+.chat-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-container::-webkit-scrollbar-track {
+  background: #d2ab99;
+  border-radius: 4px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+  background-color: #1c3235;
+  border-radius: 4px;
+  border: 2px solid #d2ab99;
 }
 
 .chat-box {
@@ -193,74 +255,51 @@
   align-items: center;
   flex-direction: row;
   padding: 1rem;
+  column-gap: 5rem;
 }
 
-@media (max-width: 1194px) {
-  /* Make NavBar smaller */
-  .nav-container {
-    padding: 0.5rem;
+@media (max-width: 1000px) {
+  .nav-center h1 {
+    font-size: 1.5rem;
   }
-  .nav-container .nav-item {
-    font-size: 1rem;
-  }
-  .nav-container .nav-item:first-of-type {
-    left: 1rem;
-  }
-  .nav-container .nav-item:last-of-type {
-    right: 1rem;
-  }
-  /* Make the side interface smaller */
-  .side-interface-container {
-    width: 250px;
-    top: 4rem;
-  }
-  /* Make the table smaller */
-  .table-container {
-    width: 250px;
-  }
-  .table-container th {
-    font-size: 0.75rem;
-  }
-  .table-container td {
-    font-size: 1rem;
+
+  .room-name {
+    font-size: 1.2rem;
   }
 }
 
 @media (max-width: 800px) {
-  /* Make the side interface On top */
-  .side-interface-container {
-    width: 100%;
-    top: 0;
-    height: auto;
-    position: static;
+  .dropdown-button {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.8rem;
   }
-  /* Make the table smaller */
-  .table-container {
-    width: 100%;
+
+  .nav-center h1 {
+    font-size: 1.2rem;
   }
-  /* Make the navigation bar vertical and smaller */
-  .nav-container {
-    flex-direction: column;
-    align-items: center;
-    padding: 1rem;
-  }
-  .nav-container .nav-item {
-    position: static;
-    transform: none;
-    text-align: center;
-  }
-  .nav-container h1 {
-    font-size: 1.5rem;
-  }
-  /* Make the Round Info smaller */
-  .round-container {
-    width: 100%;
-    padding: 0.5rem;
-  }
-  .round-container h1 {
-    font-size: 1.5rem;
-  }
-  .round-container h2 {
+
+  .room-name {
     font-size: 1rem;
+    width: 20%;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-center h1 {
+    font-size: 1.1rem;
+  }
+
+  .room-name {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .nav-center h1 {
+    font-size: 1rem;
+  }
+
+  .room-name {
+    font-size: 0.7rem;
   }
 }

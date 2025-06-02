@@ -133,7 +133,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
-    'https://whos-the-better-human-v83v.onrender.com'
+    'https://whos-the-better-human-v83v.onrender.com',
+    'https://whosthebetterhuman.com'
 ]
 
 CORS_ALLOW_CREDENTIALS = True

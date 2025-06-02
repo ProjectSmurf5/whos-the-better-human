@@ -3,6 +3,7 @@ import ReactionBox from "./ReactionBox";
 import ReadyButton from "./ReadyButton";
 import { generateRandom } from "../utils/functions";
 import GameOver from "./GameOver";
+import NavBar from "./NavBar";
 import { useState, useEffect, use } from "react";
 import { socket } from "../socket";
 import axios from "axios";
@@ -15,6 +16,7 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
   const [timer1AFKTimeout, setTimer1AFKTimeout] = useState();
   const [eloGain, setEloGain] = useState(0);
   const [chatMessages, setChatMessages] = useState([]);
+  const [showSideInterface, setShowSideInterface] = useState(true);
 
   const [timerTwoStartStamp, setTimerTwoStartStamp] = useState();
   const [timerTwoAFKTimeout, setTimerTwoAFKTimeout] = useState();
@@ -157,8 +159,17 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
     console.log("Game Ended: ", finalGameObj);
   }
 
+  const toggleSideInterface = () => {
+    setShowSideInterface(!showSideInterface);
+  };
+
   return (
     <div className="Game">
+      <NavBar
+        roomName={gameObj.roomName}
+        showSideInterface={showSideInterface}
+        toggleSideInterface={toggleSideInterface}
+      />
       {gameFinished ? (
         <GameOver
           winner={gameObj.state.result.winner}
@@ -166,19 +177,8 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
           eloDifference={gameObj.players[playerNumber].eloDiff}
         />
       ) : null}
-      <div className="nav-container">
-        {/* <h2>You are player {playerNumber}</h2> */}
-        <h2 className="nav-item">Room Name: {gameObj.roomName}</h2>
-        <h1>WHOSTHEBETTERHUMAN</h1>
-        <h2 className="nav-item">
-          Ready: {gameState.playersReady == null ? 0 : gameState.playersReady}/2
-        </h2>
-      </div>
-      <div className="game-container">
-        <div className="round-container">
-          <h2>Player {playerNumber} </h2>
-          <h2 className="round-item">Round {gameState.currentRound}/5</h2>
-        </div>
+      <div
+        className={`game-container ${!showSideInterface ? "full-width" : ""}`}>
         <ReactionBox
           clickHandler={clickHandler}
           roundRunning={roundRunning}
@@ -186,59 +186,61 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
         />
         <ReadyButton readyHandler={readyHandler} clickedReady={clickedReady} />
       </div>
-      <div className="side-interface-container">
-        {
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Round</th>
-                  <th>Player 1</th>
-                  <th>Player 2</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 5 }).map((_, i) => {
-                  if (
-                    gameObj.players[1].score[i] != null &&
-                    gameObj.players[2].score[i] != null
-                  ) {
-                    return (
-                      <tr key={i}>
-                        <td>{i + 1}</td>
-                        <td>{gameObj.players[1].score[i]}</td>
-                        <td>{gameObj.players[2].score[i]}</td>
-                      </tr>
-                    );
-                  } else {
-                    return (
-                      <tr key={i}>
-                        <td>{i + 1}</td>
-                        <td>-</td>
-                        <td>-</td>
-                      </tr>
-                    );
-                  }
-                })}
-              </tbody>
-            </table>
-          </div>
-        }
-        <div className="chat-container">
-          <div className="chat-box">
-            {chatMessages.length === 0 ? (
-              <p className="chat-empty">No messages yet</p>
-            ) : (
-              chatMessages.map((msg, index) => (
-                <div key={index} className="chat-message">
-                  <span className="chat-user">{msg.user}: </span>
-                  <span className="chat-text">{msg.message}</span>
-                </div>
-              ))
-            )}
+      {showSideInterface && (
+        <div className="side-interface-container">
+          {
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Round</th>
+                    <th>Player 1</th>
+                    <th>Player 2</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    if (
+                      gameObj.players[1].score[i] != null &&
+                      gameObj.players[2].score[i] != null
+                    ) {
+                      return (
+                        <tr key={i}>
+                          <td>{i + 1}</td>
+                          <td>{gameObj.players[1].score[i]}</td>
+                          <td>{gameObj.players[2].score[i]}</td>
+                        </tr>
+                      );
+                    } else {
+                      return (
+                        <tr key={i}>
+                          <td>{i + 1}</td>
+                          <td>-</td>
+                          <td>-</td>
+                        </tr>
+                      );
+                    }
+                  })}
+                </tbody>
+              </table>
+            </div>
+          }
+          <div className="chat-container">
+            <div className="chat-box">
+              {chatMessages.length === 0 ? (
+                <p className="chat-empty">No messages yet</p>
+              ) : (
+                chatMessages.map((msg, index) => (
+                  <div key={index} className="chat-message">
+                    <span className="chat-user">{msg.user}: </span>
+                    <span className="chat-text">{msg.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

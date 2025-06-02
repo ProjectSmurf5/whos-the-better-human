@@ -12,7 +12,7 @@ POST http://127.0.0.1:8000/signup
 Content-Type: application/json
 
 {
-  "username": "test13",
+  "username": "test111111",
   "password": "test1234"
 }
 
@@ -20,7 +20,7 @@ Content-Type: application/json
 
 GET http://127.0.0.1:8000/test_token
 Content-Type: application/json
-Authorization: Token 6173eb0d5cbbc220930e87ca7ede3aca108aa8c4
+Authorization: Token 18d992019609a0f2dfd5a7c964cde3357b25e5f5
 
 {}
 

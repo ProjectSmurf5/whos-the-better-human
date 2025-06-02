@@ -103,3 +103,35 @@
   font-family: "Courier New", Courier, monospace;
   font-weight: 600;
 }
+
+@media (max-width: 700px) {
+  .heroTitle {
+    font-size: 1.5rem;
+  }
+  .heroButtons {
+    margin-top: 2rem;
+    flex-direction: column;
+    row-gap: 1rem;
+  }
+  .heroButton {
+    width: 100%;
+  }
+  .roomInputField {
+    width: 100%;
+  }
+}
+
+@media (max-width: 400px) {
+  .heroTitle {
+    font-size: 1.2rem;
+  }
+  .heroButtons {
+    margin-top: 1rem;
+  }
+  .heroButton {
+    width: 100%;
+  }
+  .roomInputField {
+    width: 100%;
+  }
+}

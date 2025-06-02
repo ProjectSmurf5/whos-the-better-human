@@ -210,6 +210,13 @@ io.on("connect", (socket) => {
     player.isReady = true;
     thisState.playersReady += 1;
 
+    const messageData = {
+      user: "System",
+      message: `${player.username} is ready!`,
+    };
+
+    io.in(socketRooms[socket.id]).emit("player-event", messageData);
+
     // all players are ready so start the game
     if (thisState.playersReady === 2) {
       thisState.currentRound += 1;
@@ -218,6 +225,12 @@ io.on("connect", (socket) => {
       io.in(socketRooms[socket.id]).emit("game-update", currentGame);
       console.log("Moving on to next round!");
       io.in(socketRooms[socket.id]).emit("next-round");
+
+      const messageData = {
+        user: "System",
+        message: `Round ${thisState.currentRound} has started!`,
+      };
+      io.in(socketRooms[socket.id]).emit("player-event", messageData);
 
       //reset players ready
       Object.keys(currentGame.players).forEach((key) => {
