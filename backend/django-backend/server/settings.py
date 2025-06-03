@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -80,10 +81,10 @@ WSGI_APPLICATION = 'server.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+     'default': dj_database_url.config(
+     default=os.environ.get('DATABASE_URL', 'sqlite:///{}'.format(BASE_DIR / 'db.sqlite3')),
+     conn_max_age=600
+     )
 }
 
 
@@ -177,4 +178,5 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = [
     'https://whos-the-better-human-v83v.onrender.com'
+    'https://whosthebetterhuman.com'
 ]
