@@ -39,6 +39,7 @@ const io = new Server(server, {
 });
 
 const { makeid } = require("./utils");
+const { readSync } = require("fs");
 
 // SERVER WIDE SETTINGS
 const NUMBEROFROUNDS = 5;
@@ -53,7 +54,6 @@ game is a dictionary with the keys as the roomNumbers
 let newGameObj = (roomName) => {
   return {
     state: {
-      playersReady: 0,
       currentRound: 0,
       numPlayers: 1,
       roundFinished: false,
@@ -78,8 +78,8 @@ let newPlayerObj = () => {
   };
 };
 
-const socketRooms = {};
-let getGameObjFromRoom = {};
+const socketRooms = {}; //maps socketIDs to roon names
+let getGameObjFromRoom = {}; //maps room names to game objects
 
 io.on("connect", (socket) => {
   console.log(`Socket connected: ${socket.id}`);
@@ -89,7 +89,7 @@ io.on("connect", (socket) => {
 
   socket.on("player-ready", handlePlayerReady);
   socket.on("player-score", handlePlayerScore);
-  // socket.on("disconnect", handleDisconnect);
+  socket.on("disconnect", handleDisconnect);
 
   function handleJoinRoom(roomName, username) {
     if (!roomName) {
@@ -208,7 +208,6 @@ io.on("connect", (socket) => {
     if (player.isReady) return;
 
     player.isReady = true;
-    thisState.playersReady += 1;
 
     const messageData = {
       user: "System",
@@ -217,10 +216,12 @@ io.on("connect", (socket) => {
 
     io.in(socketRooms[socket.id]).emit("player-event", messageData);
 
+    let numReady = Object.values(currentGame.players).filter((player) => player.isReady).length;
+
     // all players are ready so start the game
-    if (thisState.playersReady === 2) {
+    if (numReady === 2) {
       thisState.currentRound += 1;
-      thisState.playersReady = 0;
+      
 
       io.in(socketRooms[socket.id]).emit("game-update", currentGame);
       console.log("Moving on to next round!");
@@ -348,15 +349,41 @@ io.on("connect", (socket) => {
     }
   }
 
-  // function handleDisconnect() {
-  //   console.log(`Socket disconnected: ${socket.id}`);
-  //   if (!socketRooms[socket.id]) return;
+  function handleDisconnect() {
+    console.log(`Socket disconnected: ${socket.id}`);
+    if (!socketRooms[socket.id]) return;
+    const roomName = socketRooms[socket.id]
 
-  //   const currentGame = getGameObjFromRoom[socketRooms[socket.id]];
+    const currentGame = getGameObjFromRoom[roomName];
+    const playerNumber = currentGame.playerNumberFromId[socket.id];
+    const username = currentGame.players[playerNumber].username;
 
-  //   delete currentGame.playerNumberFromId[socket.id];
-  //   currentGame.state.numPlayers -= 1;
-  // }
+    // clear information of leaving player
+    delete currentGame.playerNumberFromId[socket.id];
+    delete currentGame.players[playerNumber]
+    delete currentGame.playerNumberFromUsername[username]
+
+    currentGame.state.numPlayers -= 1;
+
+    // If room is fully empty delete all records of the room
+    if(currentGame.state.numPlayers == 0) {
+      delete socketRooms[socket.id];
+      delete getGameObjFromRoom[roonName];
+    }
+
+    // Emit the message that a person has left the room
+    const messageData = {
+      user: "System",
+      message: `${username} has left the room!`,
+    };
+    console.log(
+      `[Debug] Emitting player-event to room ${roomName}:`,
+      messageData
+    );
+
+    // Broadcast to all sockets in the room
+    io.in(roomName).emit("player-event", messageData);
+  }
 });
 
 app.get("/", (req, res) => {
