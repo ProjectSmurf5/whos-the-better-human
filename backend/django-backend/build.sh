@@ -9,7 +9,7 @@ python manage.py collectstatic --noinput
 # Run migrations
 python manage.py migrate
 
-# Create a .env file if it doesn't exist
+# Create a .env file if it doesn't exist (for deployment)
 if [ ! -f .env ]; then
   echo "Creating .env file..."
   cat > .env << EOL

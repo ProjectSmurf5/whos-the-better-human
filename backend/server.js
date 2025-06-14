@@ -362,6 +362,9 @@ io.on("connect", (socket) => {
 app.get("/", (req, res) => {
   console.log("Get request on api");
   res.send("Hello from Express + Socket.IO on Render!");
+
+  axios.get(API_URL + 'leaderboard').then((response) => {
+    console.log(response.data);})
 });
 
 server.listen(PORT, () => {
