@@ -121,6 +121,14 @@ io.on("connect", (socket) => {
     socketRooms[socket.id] = roomName;
     const currentGame = getGameObjFromRoom[roomName];
 
+    if (currentGame.state.currentRound > 0) {
+      console.log(
+        `[Debug] Room ${roomName} already has an ongoing game. Cannot join.`
+      );
+      socket.emit("tooManyPlayers");
+      return;
+    }
+
     // Find available player slot
     let thisPlayerId = 1;
     while (currentGame.players[thisPlayerId] != null) {

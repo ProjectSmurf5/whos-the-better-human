@@ -50,6 +50,15 @@ function AppRoutes() {
   const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
+    const splitPath = window.location.pathname.split("/");
+    console.log("Current URL Path: ", window.location.pathname);
+    if (splitPath.length > 2 && splitPath[1] === "game") {
+      const roomId = splitPath[2];
+      console.log("Room ID from URL: ", roomId);
+      // Emit joinRoom event to the server with the roomId
+      socket.emit("joinRoom", roomId);
+    }
+
     // Register socket event listeners
     socket.on("game-update", (gameObj) => {
       console.log("Game Update Received: ", gameObj);
@@ -73,6 +82,7 @@ function AppRoutes() {
       console.log("Unknown room code");
       setErrorMessage("Room not found. Please check the code.");
     });
+    
   }, [navigate]);
 
   function validateUser() {
@@ -208,7 +218,7 @@ function AppRoutes() {
         <Route
           path="/game/:roomId"
           element={
-            gameObj.roomName ? (
+            loggedIn ? (
               <Game
                 gameObj={gameObj}
                 playerNumber={playerNumber}
