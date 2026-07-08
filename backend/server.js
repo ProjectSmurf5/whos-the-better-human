@@ -152,6 +152,7 @@ io.on("connect", (socket) => {
 
       // Broadcast to all sockets in the room
       io.in(roomName).emit("player-event", messageData);
+      io.in(roomName).emit("game-update", currentGame);
     }, 100);
   }
 

@@ -1,6 +1,7 @@
 import "../App.css";
 import ReactionBox from "./ReactionBox";
 import ReadyButton from "./ReadyButton";
+import Lobby from "./Lobby";
 import { generateRandom } from "../utils/functions";
 import GameOver from "./GameOver";
 import NavBar from "./NavBar";
@@ -163,8 +164,16 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
     setShowSideInterface(!showSideInterface);
   };
 
+  // Old: entering a room dropped straight into the reaction view (ReactionBox +
+  //   ReadyButton + right sidebar), with no lobby/waiting UI.
+  // New: while the match hasn't started (currentRound === 0) we show the <Lobby>
+  //   (design screens 2 & 3 — waiting for opponent / ready to start). Once the
+  //   first round begins (currentRound >= 1) the original in-game view renders
+  //   unchanged, so no game logic is affected.
+  const isLobby = gameObj.state.currentRound === 0 && !gameFinished;
+
   return (
-    <div className="Game">
+    <div className={`Game ${isLobby ? "Game--lobby" : ""}`}>
       <NavBar
         roomName={gameObj.roomName}
         showSideInterface={showSideInterface}
@@ -177,17 +186,30 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
           eloDifference={gameObj.players[playerNumber].eloDiff}
         />
       ) : null}
-      <div
-        className={`game-container ${!showSideInterface ? "full-width" : ""}`}>
-        <ReactionBox
-          clickHandler={clickHandler}
-          roundRunning={roundRunning}
-          timer1Running={timer1Running}
+      {isLobby ? (
+        <Lobby
+          gameObj={gameObj}
+          playerNumber={playerNumber}
+          username={username}
+          readyHandler={readyHandler}
+          clickedReady={clickedReady}
         />
-        <ReadyButton readyHandler={readyHandler} clickedReady={clickedReady} />
-      </div>
-      {showSideInterface && (
-        <div className="side-interface-container">
+      ) : (
+        <>
+          <div
+            className={`game-container ${!showSideInterface ? "full-width" : ""}`}>
+            <ReactionBox
+              clickHandler={clickHandler}
+              roundRunning={roundRunning}
+              timer1Running={timer1Running}
+            />
+            <ReadyButton
+              readyHandler={readyHandler}
+              clickedReady={clickedReady}
+            />
+          </div>
+          {showSideInterface && (
+            <div className="side-interface-container">
           {
             <div className="table-container">
               <table>
@@ -240,6 +262,8 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
             </div>
           </div>
         </div>
+          )}
+        </>
       )}
     </div>
   );

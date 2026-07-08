@@ -39,11 +39,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 0;
-  background-color: #d2ab99;
+  background-color: var(--terracotta);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   box-sizing: border-box;
-  height: 4rem;
+  height: 5rem;
+  border-radius: 10px 10px 0 0;
 }
 
 .nav-left {
@@ -80,6 +81,12 @@
   font-size: 1.5rem;
   color: #1c3235;
   font-weight: bold;
+}
+
+.room-code {
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-weight: 400;
+  letter-spacing: 0.05rem;
 }
 
 .dropdown-button {

@@ -1,3 +1,16 @@
+/* Design tokens for the UI overhaul (screens 1-3). Colors were previously
+   hardcoded literals scattered across component CSS; these variables are the
+   shared palette sampled from WHOSTHEBETTERHUMAN Revamp.png. Existing rules that
+   still use #1c3235/#d2ab99 are left untouched to minimise drift. */
+:root {
+  --terracotta: #cda694; /* hero page bg, room header bar */
+  --petrol: #17302f; /* hero navbar, lobby background */
+  --petrol-deep: #192c29; /* card / panel backgrounds */
+  --yellow: #f5d21e; /* accents: RANK, VS, ready/host badges */
+  --rust: #b04a30; /* minor accents */
+  --cream: #f4ebe0; /* light text on petrol */
+}
+
 * {
   margin: 0;
   padding: 0;

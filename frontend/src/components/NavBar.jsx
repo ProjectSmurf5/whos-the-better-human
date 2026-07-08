@@ -4,7 +4,9 @@ function NavBar({ roomName, showSideInterface, toggleSideInterface }) {
   return (
     <nav className="nav-container">
       <div className="nav-left">
-        <span className="room-name">Room Name: {roomName}</span>
+        <span className="room-name">
+          Room Name: <span className="room-code">{roomName}</span>
+        </span>
       </div>
       <div className="nav-center">
         <h1>WHOSTHEBETTERHUMAN</h1>

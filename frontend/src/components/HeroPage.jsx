@@ -3,16 +3,17 @@ import React from "react";
 import "./HeroPage.css";
 import logoImage from "../assets/wtbh-logo.png";
 import kingImage from "../assets/king.png";
+import smallLogoImage from "../assets/wtbh-logo-white.png";
 import { useState, useEffect } from "react";
 import { socket } from "../socket"; // Import the socket instance
 
-const HeroPage = ({
+function HeroPage({
   errorMessage,
   username,
   rank,
   validateUser,
   leaderboardHandler,
-}) => {
+}) {
   console.log("username:", username);
   console.log("rank:", rank);
   const [roomCode, setRoomCode] = useState("");
@@ -40,8 +41,14 @@ const HeroPage = ({
     <>
       {/* Navbar */}
       <div className="navbar">
-        <div className="navbar-left">Welcome {username}</div>
-        <div className="navbar-right">Rank: {rank}</div>
+        <div className="navbar-left">
+          <img src={smallLogoImage} alt="" className="navbar-icon" />
+          Welcome <b>{username}</b>
+        </div>
+        <div className="navbar-right">
+          <span className="navbar-rank-label">RANK</span>
+          <span className="navbar-rank-value">{rank}</span>
+        </div>
       </div>
 
       <div className="heroPage">
@@ -50,6 +57,7 @@ const HeroPage = ({
         </button>
         <img src={logoImage} alt="Logo" className="logo" />
         <h1 className="heroTitle">WHOSTHEBETTERHUMAN?</h1>
+        <div className="heroTitleAccent" />
         <div className="heroButtons">
           <button className="heroButton" onClick={handleCreateRoom}>
             Create Room
@@ -65,12 +73,21 @@ const HeroPage = ({
             Join Room
           </button>
         </div>
+        {/* Decorative game-mode tags (future modes, non-interactive) */}
+        <div className="mode-tags">
+          <span className="mode-tag">BULLET CHESS</span>
+          <span className="mode-tag">REACTION</span>
+          <span className="mode-tag">2048 · TIMED</span>
+          <span className="mode-tag">QUICK MATH</span>
+          <span className="mode-tag">TYPE RACER</span>
+          <span className="mode-tag mode-tag--new">SEQUENCE · NEW</span>
+        </div>
         <div className="errorMessage">
           {errorMessage && <p>{errorMessage}</p>}
         </div>
       </div>
     </>
   );
-};
+}
 
 export default HeroPage;
