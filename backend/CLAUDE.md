@@ -39,6 +39,15 @@ CLAUDE.md — this one is just for the realtime layer.
   `finalizeGameEnd` handles the Django round-trip and the emit. Two callers share it:
   `handlePlayerScore` (normal finish) and `handleDisconnect` (forfeit). Django is the
   source of truth for users/ranks; this server just relays that part.
+- **Rematch reuses the same room.** `handleRematch` marks the requester's `wantsRematch`
+  (a `newPlayerObj` field); once *both* players have opted in, `resetGameForRematch` wipes
+  the per-round state (scores, tooSoon, isReady, eloDiff, result) but keeps the same room +
+  usernames/slot mappings, sets `currentRound = 1`, and the room emits `game-update` +
+  `next-round` — the same pair `handlePlayerReady` fires at match start, so both clients drop
+  **straight into round 1, skipping the lobby ready screen**. Guarded on `result.winner`
+  being set (only rematch a genuinely finished match). A single opt-in isn't broadcast — the
+  requesting client shows its own "waiting for opponent" state optimistically. Reuses
+  existing events, so the only frontend change was wiring the results-screen button.
 - **Disconnect handling forfeits in-progress matches.** `handleDisconnect` (now live) has
   two paths: mid-match (a round started, no result yet, opponent still present) → set the
   remaining player as winner and end via `finalizeGameEnd` so they land on the results
@@ -72,8 +81,9 @@ CLAUDE.md — this one is just for the realtime layer.
   `WINS_TO_CLINCH = 3`, under a `// SERVER WIDE SETTINGS` comment — add new server-wide
   tunables there.
 - Socket event names are mostly kebab-case strings (`"join-room"`, `"player-ready"`,
-  `"game-update"`, `"next-round"`, `"game-end"`, `"player-event"`), but two are
-  camelCase (`"tooManyPlayers"`, `"unknownCode"`) — replae these with kebab-case and remove this point accordingly.
+  `"player-score"`, `"rematch"`, `"game-update"`, `"next-round"`, `"game-end"`,
+  `"player-event"`), but two are camelCase (`"tooManyPlayers"`, `"unknownCode"`) — replae
+  these with kebab-case and remove this point accordingly.
 - No input validation on socket payloads beyond a truthy check on `roomName` in
   `handleJoinRoom` — `handleNewRoom` doesn't validate `username` at all, for example.
   Don't assume payloads are sanitized upstream.
@@ -96,6 +106,12 @@ CLAUDE.md — this one is just for the realtime layer.
 - Disconnect detection is Socket.IO's transport-level `disconnect` only — a frozen/hung tab
   that never actually drops the socket won't trigger it. The frontend's opponent-wait banner
   (`OPPONENT_WAIT_TIMEOUT_MS` in `Game.jsx`) is the client-side backstop for that case.
+- **"Back to menu" doesn't leave the socket room** (frontend `handleMainMenu` just navigates,
+  no leave/disconnect event) — a pre-existing quirk now visible via rematch: if player A
+  clicks Rematch then Back to menu, their `wantsRematch` stays set, so when B clicks Rematch
+  the room resets and the `next-round`/`game-update` broadcast yanks A (still socket-joined)
+  back into the fresh game via App.js's game-update navigation. Fixing it properly needs a
+  real "leave room" event/protocol (out of scope for the rematch change).
 - No error handling middleware and no try/catch around most socket handlers — a
   thrown error inside a handler (e.g. `currentGame` being `undefined` if state got
   out of sync) will surface as an unhandled exception rather than a clean error to

@@ -36,6 +36,9 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
   const [timerTwoAFKTimeout, setTimerTwoAFKTimeout] = useState();
 
   const [clickedReady, setClickedReady] = useState(false);
+  // Optimistic "I clicked Rematch" flag (mirrors clickedReady) — flips the
+  // results-screen button to "waiting for opponent" the moment it's pressed.
+  const [clickedRematch, setClickedRematch] = useState(false);
 
   // Round-race state: myLastScore is the missing piece that used to be
   // computed locally in clickHandler and only ever emitted, never stored, so
@@ -72,6 +75,16 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
     }
     socket.emit("player-ready");
     setClickedReady(true);
+  }
+
+  // Rematch: signal intent to the server and optimistically show "waiting for
+  // opponent". When both players opt in the server resets the room and emits
+  // game-update + next-round, which lands us back in round 1 (onRoundStart
+  // clears gameFinished/clickedRematch) — no dedicated response event needed.
+  function rematchHandler() {
+    if (clickedRematch) return;
+    socket.emit("rematch");
+    setClickedRematch(true);
   }
 
   // Old: "player-score" carried just the raw ms number, so the opponent
@@ -154,6 +167,11 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
     setMyLastScore(null);
     setTooSoon(false);
     setShowOpponentWaitBanner(false);
+    // A round starting also covers the rematch case: the server reset the room
+    // and started round 1, so clear the finished/rematch flags to drop out of
+    // the results screen and back into play. Harmless no-ops during normal play.
+    setGameFinished(false);
+    setClickedRematch(false);
 
     // Random time between 2-4 secs
     let timerOneLength = generateRandom(2000) + 2000;
@@ -214,6 +232,8 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
           gameObj={gameObj}
           playerNumber={playerNumber}
           handleMainMenu={handleMainMenu}
+          rematchHandler={rematchHandler}
+          clickedRematch={clickedRematch}
         />
       ) : null}
       {isLobby ? (

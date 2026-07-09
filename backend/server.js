@@ -79,6 +79,9 @@ let newPlayerObj = () => {
     // would otherwise be indistinguishable from an early click by score alone.
     tooSoon: [],
     isReady: false,
+    // Set when a player clicks Rematch on the results screen; when both are
+    // set, handleRematch resets the room and starts a fresh match.
+    wantsRematch: false,
     username: null,
     eloDiff: 0,
   };
@@ -95,6 +98,7 @@ io.on("connect", (socket) => {
 
   socket.on("player-ready", handlePlayerReady);
   socket.on("player-score", handlePlayerScore);
+  socket.on("rematch", handleRematch);
   socket.on("disconnect", handleDisconnect);
 
   function handleJoinRoom(roomName, username) {
@@ -417,6 +421,63 @@ io.on("connect", (socket) => {
       currentGame.state.roundFinished = true;
       io.in(socketRooms[socket.id]).emit("game-update", currentGame);
       currentGame.state.roundFinished = false;
+    }
+  }
+
+  // Wipe a finished match's per-round state back to a fresh match, keeping the
+  // same room and the same two players (usernames + slot mappings preserved, so
+  // this can't reuse newPlayerObj which would blank the username). currentRound
+  // is set to 1 rather than 0 because a rematch drops straight into the first
+  // round — it skips the lobby "ready" screen (both players already opted in).
+  function resetGameForRematch(currentGame) {
+    Object.values(currentGame.players).forEach((player) => {
+      player.score = [];
+      player.tooSoon = [];
+      player.isReady = false;
+      player.wantsRematch = false;
+      player.eloDiff = 0;
+    });
+    currentGame.state.currentRound = 1;
+    currentGame.state.playersReady = 0;
+    currentGame.state.roundFinished = false;
+    currentGame.state.result = { winner: null, loser: null };
+  }
+
+  // A player clicked "Rematch" on the results screen. Only meaningful once the
+  // match has actually ended (guarded on result.winner). Marks this player's
+  // intent; once BOTH players want a rematch, reset the room and start round 1
+  // immediately — broadcast the fresh state (game-update) then "next-round",
+  // exactly like handlePlayerReady does at match start, so both clients drop
+  // straight into the first round. The requesting client shows its own
+  // "waiting for opponent" state locally (optimistic), so a single opt-in
+  // needs no broadcast.
+  function handleRematch() {
+    const roomName = socketRooms[socket.id];
+    if (!roomName) return;
+    const currentGame = getGameObjFromRoom[roomName];
+    if (!currentGame) return;
+    // Ignore rematch requests unless the match is genuinely over — otherwise a
+    // stray/early "rematch" would wipe an in-progress game.
+    if (currentGame.state.result.winner == null) return;
+
+    const thisPlayerId = currentGame.playerNumberFromId[socket.id];
+    const player = currentGame.players[thisPlayerId];
+    if (!player || player.wantsRematch) return; // not mapped, or already opted in
+
+    player.wantsRematch = true;
+    console.log(
+      `[Debug] Player ${thisPlayerId} wants a rematch in room ${roomName}`,
+    );
+
+    const numWantRematch = Object.values(currentGame.players).filter(
+      (p) => p.wantsRematch,
+    ).length;
+
+    if (numWantRematch === 2) {
+      resetGameForRematch(currentGame);
+      console.log(`[Debug] Both players ready — starting rematch in ${roomName}`);
+      io.in(roomName).emit("game-update", currentGame);
+      io.in(roomName).emit("next-round");
     }
   }
 

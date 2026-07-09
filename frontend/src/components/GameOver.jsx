@@ -53,8 +53,17 @@ function findClosestRound(p1Scores, p2Scores, roundsPlayed) {
  *   players' score histories, eloDiff, and gameObj.state.result.winner/loser
  * @param {number} playerNumber - the viewing client's own player slot
  * @param {function} handleMainMenu - navigates back to the hero page
+ * @param {function} rematchHandler - signals rematch intent to the server
+ * @param {boolean} clickedRematch - whether this client already opted into a
+ *   rematch (drives the button's "waiting for opponent" state)
  */
-function GameOver({ gameObj, playerNumber, handleMainMenu }) {
+function GameOver({
+  gameObj,
+  playerNumber,
+  handleMainMenu,
+  rematchHandler,
+  clickedRematch,
+}) {
   const player1 = gameObj.players[1];
   const player2 = gameObj.players[2];
   const winnerName = gameObj.state.result.winner;
@@ -151,8 +160,9 @@ function GameOver({ gameObj, playerNumber, handleMainMenu }) {
       <div className="game-over-buttons">
         <button
           className="pill-button--filled"
-          onClick={() => console.log("Rematch clicked (not yet wired up)")}>
-          Rematch
+          onClick={rematchHandler}
+          disabled={clickedRematch}>
+          {clickedRematch ? "Waiting for opponent..." : "Rematch"}
         </button>
         <button className="pill-button--outline" onClick={handleMainMenu}>
           Back to menu

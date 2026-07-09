@@ -46,12 +46,18 @@
   "Back to menu" escape if the opponent's score never arrives — **not real forfeit
   detection**, the Node disconnect handler is still commented out (see `backend/CLAUDE.md`).
 - **Match results (design screen 4)**: `GameOver` takes `{ gameObj, playerNumber,
-  handleMainMenu }` (not individual pre-extracted fields, matching the `Lobby` prop
-  pattern) and derives everything else — round-win tally, fastest-reaction/closest-round
-  stats, the round-outcome pip strip — from `gameObj.players[1].score`/`[2].score` via
+  handleMainMenu, rematchHandler, clickedRematch }` (mostly whole-object props, matching the
+  `Lobby` prop pattern) and derives the display — round-win tally, fastest-reaction/closest-
+  round stats, the round-outcome pip strip — from `gameObj.players[1].score`/`[2].score` via
   `getRoundWins` (`src/utils/functions.js`). Elo display is untouched from before this
   redesign (no new rank tile) — Elo is slated for removal in a later roadmap phase per the
   root `CLAUDE.md`, so it wasn't worth building further UI around.
+- **Rematch** mirrors the Ready-button pattern: `rematchHandler` (in `Game.jsx`) emits the
+  `"rematch"` socket event and optimistically flips `clickedRematch`, which turns the results
+  button into a disabled "Waiting for opponent...". When both players opt in, the server
+  resets the room and emits `game-update` + `next-round`; `onRoundStart` (Game.jsx) clears
+  `gameFinished`/`clickedRematch` on any round start, so that same event pair drops both
+  clients out of `GameOver` and straight into round 1 — no dedicated "rematch started" event.
 - **The old right-hand sidebar (score table + chat) was removed entirely** — it wasn't part
   of any mockup screen and its data (hardcoded "Player 1"/"Player 2" headers, an unstyled
   chat feed) predated this redesign. `showSideInterface`/`toggleSideInterface` state, the
