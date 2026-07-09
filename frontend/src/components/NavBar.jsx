@@ -1,6 +1,6 @@
 import React from "react";
 
-function NavBar({ roomName, showSideInterface, toggleSideInterface }) {
+function NavBar({ roomName }) {
   return (
     <nav className="nav-container">
       <div className="nav-left">
@@ -12,8 +12,12 @@ function NavBar({ roomName, showSideInterface, toggleSideInterface }) {
         <h1>WHOSTHEBETTERHUMAN</h1>
       </div>
       <div className="nav-right">
-        <button className="dropdown-button" onClick={toggleSideInterface}>
-          {showSideInterface ? ">" : "<"}
+        {/* Matches the mockup's corner button on every room screen; no
+            drawer/menu exists yet for it to open, kept visual-only. */}
+        <button
+          className="dropdown-button"
+          onClick={() => console.log("Menu button clicked (not yet wired to anything)")}>
+          &gt;
         </button>
       </div>
     </nav>

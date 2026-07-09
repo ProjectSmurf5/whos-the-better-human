@@ -142,46 +142,6 @@
   color: rgba(244, 235, 224, 0.6);
 }
 
-/* Animated loading dots after "WAITING"/"waiting" text: build up . .. ...
-   then loop. Fixed width reserves space for 3 dots so the badge/line doesn't
-   jitter as the count changes. aria-hidden in the markup keeps it decorative. */
-.waiting-dots {
-  display: inline-block;
-  width: 3ch;
-  text-align: left;
-}
-
-.waiting-dots::after {
-  content: "";
-  animation: waitingDots 1.6s linear infinite;
-}
-
-@keyframes waitingDots {
-  0% {
-    content: "";
-  }
-  25% {
-    content: ".";
-  }
-  50% {
-    content: "..";
-  }
-  75% {
-    content: "...";
-  }
-  100% {
-    content: "";
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Show the dots statically instead of animating */
-  .waiting-dots::after {
-    content: "...";
-    animation: none;
-  }
-}
-
 .lobby-vs {
   font-family: "Shrikhand", "Courier New", Courier, monospace;
   font-size: 3rem;

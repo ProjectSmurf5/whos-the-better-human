@@ -20,7 +20,7 @@ app.use(
         : "*",
     methods: ["GET", "POST"],
     credentials: true,
-  })
+  }),
 );
 
 // Create HTTP server and wrap Express app
@@ -38,10 +38,11 @@ const io = new Server(server, {
   },
 });
 
-const { makeid } = require("./utils");
+const { makeid, getRoundWins } = require("./utils");
 
 // SERVER WIDE SETTINGS
 const NUMBEROFROUNDS = 5;
+const WINS_TO_CLINCH = 3;
 
 /*
 game is a dictionary with the keys as the roomNumbers
@@ -72,6 +73,11 @@ let newGameObj = (roomName) => {
 let newPlayerObj = () => {
   return {
     score: [],
+    // Parallel to score — tooSoon[i] is true iff score[i] came from an early
+    // click (clicked during STEADY) rather than a real reaction or a missed
+    // timeout, both of which also submit the same 1000ms penalty value and
+    // would otherwise be indistinguishable from an early click by score alone.
+    tooSoon: [],
     isReady: false,
     username: null,
     eloDiff: 0,
@@ -102,7 +108,7 @@ io.on("connect", (socket) => {
     let numsockets = room ? room.size : 0;
 
     console.log(
-      `[Debug] Join Room: Room ${roomName} exists with ${numsockets} socket(s)`
+      `[Debug] Join Room: Room ${roomName} exists with ${numsockets} socket(s)`,
     );
 
     if (!room || numsockets === 0) {
@@ -147,7 +153,7 @@ io.on("connect", (socket) => {
       };
       console.log(
         `[Debug] Emitting player-event to room ${roomName}:`,
-        messageData
+        messageData,
       );
 
       // Broadcast to all sockets in the room
@@ -189,7 +195,7 @@ io.on("connect", (socket) => {
       };
       console.log(
         `[Debug] Emitting player-event to room ${roomName}:`,
-        messageData
+        messageData,
       );
       // Emit to the specific socket
       socket.emit("player-event", messageData);
@@ -242,24 +248,49 @@ io.on("connect", (socket) => {
     }
   }
 
-  function handlePlayerScore(score) {
+  // Old: "player-score" carried just the raw ms number, so a 1000 penalty
+  //   from an early click and a 1000 penalty from simply missing the CLICK
+  //   window were indistinguishable to the opponent (and to this server).
+  // New: carries { score, tooSoon }. score is stored exactly as before —
+  //   round-win/match-win logic is unaffected either way, a 1000 still loses
+  //   the round regardless of why. tooSoon is stored in a parallel array
+  //   purely so clients can show the accurate "TOO SOON" reason instead of
+  //   guessing from the score value.
+  function handlePlayerScore(payload) {
+    const { score, tooSoon } = payload;
     const currentGame = getGameObjFromRoom[socketRooms[socket.id]];
     const thisPlayerId = currentGame.playerNumberFromId[socket.id];
 
     console.log(
       `Room ${socketRooms[socket.id]} Received Player ${
         currentGame.playerNumberFromId[socket.id]
-      } Score: ${score}!`
+      } Score: ${score}! (tooSoon: ${tooSoon})`,
     );
     const playerNumber = currentGame.playerNumberFromId[socket.id];
     currentGame.players[playerNumber].score.push(score);
+    currentGame.players[playerNumber].tooSoon.push(tooSoon);
 
     if (
       currentGame.players[1].score.length ===
       currentGame.players[2].score.length
     ) {
       console.log("Both players have submitted scores!");
-      if (currentGame.state.currentRound >= NUMBEROFROUNDS) {
+      const { wins1, wins2 } = getRoundWins(
+        currentGame.players[1].score,
+        currentGame.players[2].score,
+      );
+      // Old: match ended only once every round had been played
+      //   (currentRound >= NUMBEROFROUNDS), and the winner was whoever had the
+      //   lower average reaction time across all 5 rounds.
+      // New: match ends as soon as either player clinches best-of-5
+      //   (WINS_TO_CLINCH round wins), same as the round cap being reached.
+      //   Winner is decided by round-win count; average time is now only a
+      //   tiebreaker for the rare case both hit the round-5 cap tied.
+      if (
+        wins1 >= WINS_TO_CLINCH ||
+        wins2 >= WINS_TO_CLINCH ||
+        currentGame.state.currentRound >= NUMBEROFROUNDS
+      ) {
         function getPlayerAverage(playerNumber) {
           let total = 0;
           let playerScores = currentGame.players[playerNumber].score;
@@ -269,62 +300,87 @@ io.on("connect", (socket) => {
           console.log(`Player ${playerNumber} Total: ${total}`);
           return total / currentGame.state.currentRound;
         }
-        const player1Average = getPlayerAverage(1);
-        const player2Average = getPlayerAverage(2);
-        console.log(`Player 1 Average: ${player1Average}`);
-        console.log(`Player 2 Average: ${player2Average}`);
-        if (player1Average < player2Average) {
+        console.log(
+          `Player 1 round wins: ${wins1}, Player 2 round wins: ${wins2}`,
+        );
+        if (wins1 > wins2) {
           currentGame.state.result.winner = `${currentGame.players[1].username}`;
           currentGame.state.result.loser = `${currentGame.players[2].username}`;
-        } else if (player1Average > player2Average) {
+        } else if (wins2 > wins1) {
           currentGame.state.result.winner = `${currentGame.players[2].username}`;
           currentGame.state.result.loser = `${currentGame.players[1].username}`;
         } else {
-          currentGame.state.result.winner = "Draw";
-          currentGame.state.result.loser = "Draw";
+          // Tied round wins at the round-5 cap (e.g. 2-2 with a push) — fall
+          // back to average reaction time as a tiebreaker, same comparison
+          // the old average-only model always used.
+          const player1Average = getPlayerAverage(1);
+          const player2Average = getPlayerAverage(2);
+          console.log(
+            `Tiebreak — Player 1 Average: ${player1Average}, Player 2 Average: ${player2Average}`,
+          );
+          if (player1Average < player2Average) {
+            currentGame.state.result.winner = `${currentGame.players[1].username}`;
+            currentGame.state.result.loser = `${currentGame.players[2].username}`;
+          } else if (player1Average > player2Average) {
+            currentGame.state.result.winner = `${currentGame.players[2].username}`;
+            currentGame.state.result.loser = `${currentGame.players[1].username}`;
+          } else {
+            currentGame.state.result.winner = "Draw";
+            currentGame.state.result.loser = "Draw";
+          }
         }
         console.log("Sending data to update_rank:", currentGame.state.result);
         axios
           .post(API_URL + "update_rank", currentGame.state.result)
           .then((response) => {
             console.log("Rank updated successfully:", response.data);
-            console.log(
-              "Winner player number:",
-              currentGame.playerNumberFromUsername[
-                response.data.winner.username
-              ]
-            );
-            console.log(
-              "Loser player number:",
-              currentGame.playerNumberFromUsername[response.data.loser.username]
-            );
-            const winnerPlayerNumber =
-              currentGame.playerNumberFromUsername[
-                response.data.winner.username
-              ];
-            const loserPlayerNumber =
-              currentGame.playerNumberFromUsername[
-                response.data.loser.username
-              ];
+            // A "Draw" result skips the rank lookup on the Django side and
+            // responds with { draw: true } instead of { winner, loser } — in
+            // that case there's no eloDiff to assign, just end the game.
+            if (!response.data.draw) {
+              console.log(
+                "Winner player number:",
+                currentGame.playerNumberFromUsername[
+                  response.data.winner.username
+                ],
+              );
+              console.log(
+                "Loser player number:",
+                currentGame.playerNumberFromUsername[
+                  response.data.loser.username
+                ],
+              );
+              const winnerPlayerNumber =
+                currentGame.playerNumberFromUsername[
+                  response.data.winner.username
+                ];
+              const loserPlayerNumber =
+                currentGame.playerNumberFromUsername[
+                  response.data.loser.username
+                ];
 
-            if (winnerPlayerNumber && currentGame.players[winnerPlayerNumber]) {
-              currentGame.players[winnerPlayerNumber].eloDiff =
-                response.data.winner.rank_diff;
-            }
-            if (loserPlayerNumber && currentGame.players[loserPlayerNumber]) {
-              currentGame.players[loserPlayerNumber].eloDiff =
-                response.data.loser.rank_diff;
-            }
+              if (
+                winnerPlayerNumber &&
+                currentGame.players[winnerPlayerNumber]
+              ) {
+                currentGame.players[winnerPlayerNumber].eloDiff =
+                  response.data.winner.rank_diff;
+              }
+              if (loserPlayerNumber && currentGame.players[loserPlayerNumber]) {
+                currentGame.players[loserPlayerNumber].eloDiff =
+                  response.data.loser.rank_diff;
+              }
 
-            // Log the updated game state
-            console.log("Updated game state:", {
-              player1: currentGame.players[1]
-                ? currentGame.players[1].eloDiff
-                : "no player 1",
-              player2: currentGame.players[2]
-                ? currentGame.players[2].eloDiff
-                : "no player 2",
-            });
+              // Log the updated game state
+              console.log("Updated game state:", {
+                player1: currentGame.players[1]
+                  ? currentGame.players[1].eloDiff
+                  : "no player 1",
+                player2: currentGame.players[2]
+                  ? currentGame.players[2].eloDiff
+                  : "no player 2",
+              });
+            }
 
             console.log("Game Over!");
             io.in(socketRooms[socket.id]).emit("game-end", {
@@ -364,8 +420,9 @@ app.get("/", (req, res) => {
   console.log("Get request on api");
   res.send("Hello from Express + Socket.IO on Render!");
 
-  axios.get(API_URL + 'leaderboard').then((response) => {
-    console.log(response.data);})
+  axios.get(API_URL + "leaderboard").then((response) => {
+    console.log(response.data);
+  });
 });
 
 server.listen(PORT, () => {
