@@ -8,7 +8,6 @@
 *.swo
 *.tmp
 *.bak
-CLAUDE.md
 # =========================
 # Backend ignores
 # =========================
@@ -20,8 +19,6 @@ db.sqlite3
 backend/django-backend/server/migrations/
 backend/django-backend/staticfiles/
 backend/django-backend/.env
-backend/CLAUDE.md
-backend/django-backend/CLAUDE.md
 
 
 # =========================
@@ -36,6 +33,5 @@ frontend/.env.test.local
 frontend/.env.production.local
 frontend/.vscode
 frontend/build
-frontend/CLAUDE.md
 
 
