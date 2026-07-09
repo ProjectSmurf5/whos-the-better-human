@@ -95,7 +95,7 @@ io.on("connect", (socket) => {
 
   socket.on("player-ready", handlePlayerReady);
   socket.on("player-score", handlePlayerScore);
-  // socket.on("disconnect", handleDisconnect);
+  socket.on("disconnect", handleDisconnect);
 
   function handleJoinRoom(roomName, username) {
     if (!roomName) {
@@ -248,6 +248,76 @@ io.on("connect", (socket) => {
     }
   }
 
+  // Persist the (already-decided) match result to Django and emit "game-end"
+  // to the room. Extracted from handlePlayerScore so the normal match finish
+  // and a forfeit-by-disconnect (handleDisconnect) end the game identically.
+  // The caller must have already set currentGame.state.result.winner/.loser.
+  //
+  // @param currentGame - the room's game object, result already populated
+  // @param roomName - room to emit "game-end" to, passed explicitly since a
+  //   disconnecting socket can't be relied on to still map to its room
+  // @param endingPlayerId - player number stamped on the game-end payload
+  //   (the frontend ignores it today; kept for payload-shape parity)
+  function finalizeGameEnd(currentGame, roomName, endingPlayerId) {
+    console.log("Sending data to update_rank:", currentGame.state.result);
+    axios
+      .post(API_URL + "update_rank", currentGame.state.result)
+      .then((response) => {
+        console.log("Rank updated successfully:", response.data);
+        // A "Draw" result skips the rank lookup on the Django side and
+        // responds with { draw: true } instead of { winner, loser } — in
+        // that case there's no eloDiff to assign, just end the game.
+        if (!response.data.draw) {
+          console.log(
+            "Winner player number:",
+            currentGame.playerNumberFromUsername[response.data.winner.username],
+          );
+          console.log(
+            "Loser player number:",
+            currentGame.playerNumberFromUsername[response.data.loser.username],
+          );
+          const winnerPlayerNumber =
+            currentGame.playerNumberFromUsername[response.data.winner.username];
+          const loserPlayerNumber =
+            currentGame.playerNumberFromUsername[response.data.loser.username];
+
+          if (winnerPlayerNumber && currentGame.players[winnerPlayerNumber]) {
+            currentGame.players[winnerPlayerNumber].eloDiff =
+              response.data.winner.rank_diff;
+          }
+          if (loserPlayerNumber && currentGame.players[loserPlayerNumber]) {
+            currentGame.players[loserPlayerNumber].eloDiff =
+              response.data.loser.rank_diff;
+          }
+
+          // Log the updated game state
+          console.log("Updated game state:", {
+            player1: currentGame.players[1]
+              ? currentGame.players[1].eloDiff
+              : "no player 1",
+            player2: currentGame.players[2]
+              ? currentGame.players[2].eloDiff
+              : "no player 2",
+          });
+        }
+
+        console.log("Game Over!");
+        io.in(roomName).emit("game-end", {
+          playerNumber: endingPlayerId,
+          game: currentGame,
+        });
+      })
+      .catch((error) => {
+        console.error("Error updating rank:", error);
+        // Even if there's an error updating rank, we should still end the game
+        console.log("Game Over (with error)!");
+        io.in(roomName).emit("game-end", {
+          playerNumber: endingPlayerId,
+          game: currentGame,
+        });
+      });
+  }
+
   // Old: "player-score" carried just the raw ms number, so a 1000 penalty
   //   from an early click and a 1000 penalty from simply missing the CLICK
   //   window were indistinguishable to the opponent (and to this server).
@@ -259,6 +329,18 @@ io.on("connect", (socket) => {
   function handlePlayerScore(payload) {
     const { score, tooSoon } = payload;
     const currentGame = getGameObjFromRoom[socketRooms[socket.id]];
+    // Defensive: ignore a stray score once the match has already been decided
+    // (e.g. one that arrives right after a forfeit-by-disconnect set the
+    // result), or if the room/opponent is gone — otherwise the score-array
+    // length check below would read off a missing player object.
+    if (
+      !currentGame ||
+      currentGame.state.result.winner != null ||
+      !currentGame.players[1] ||
+      !currentGame.players[2]
+    ) {
+      return;
+    }
     const thisPlayerId = currentGame.playerNumberFromId[socket.id];
 
     console.log(
@@ -329,74 +411,7 @@ io.on("connect", (socket) => {
             currentGame.state.result.loser = "Draw";
           }
         }
-        console.log("Sending data to update_rank:", currentGame.state.result);
-        axios
-          .post(API_URL + "update_rank", currentGame.state.result)
-          .then((response) => {
-            console.log("Rank updated successfully:", response.data);
-            // A "Draw" result skips the rank lookup on the Django side and
-            // responds with { draw: true } instead of { winner, loser } — in
-            // that case there's no eloDiff to assign, just end the game.
-            if (!response.data.draw) {
-              console.log(
-                "Winner player number:",
-                currentGame.playerNumberFromUsername[
-                  response.data.winner.username
-                ],
-              );
-              console.log(
-                "Loser player number:",
-                currentGame.playerNumberFromUsername[
-                  response.data.loser.username
-                ],
-              );
-              const winnerPlayerNumber =
-                currentGame.playerNumberFromUsername[
-                  response.data.winner.username
-                ];
-              const loserPlayerNumber =
-                currentGame.playerNumberFromUsername[
-                  response.data.loser.username
-                ];
-
-              if (
-                winnerPlayerNumber &&
-                currentGame.players[winnerPlayerNumber]
-              ) {
-                currentGame.players[winnerPlayerNumber].eloDiff =
-                  response.data.winner.rank_diff;
-              }
-              if (loserPlayerNumber && currentGame.players[loserPlayerNumber]) {
-                currentGame.players[loserPlayerNumber].eloDiff =
-                  response.data.loser.rank_diff;
-              }
-
-              // Log the updated game state
-              console.log("Updated game state:", {
-                player1: currentGame.players[1]
-                  ? currentGame.players[1].eloDiff
-                  : "no player 1",
-                player2: currentGame.players[2]
-                  ? currentGame.players[2].eloDiff
-                  : "no player 2",
-              });
-            }
-
-            console.log("Game Over!");
-            io.in(socketRooms[socket.id]).emit("game-end", {
-              playerNumber: thisPlayerId,
-              game: currentGame,
-            });
-          })
-          .catch((error) => {
-            console.error("Error updating rank:", error);
-            // Even if there's an error updating rank, we should still end the game
-            console.log("Game Over (with error)!");
-            io.in(socketRooms[socket.id]).emit("game-end", {
-              playerNumber: thisPlayerId,
-              game: currentGame,
-            });
-          });
+        finalizeGameEnd(currentGame, socketRooms[socket.id], thisPlayerId);
         return;
       }
       currentGame.state.roundFinished = true;
@@ -405,15 +420,82 @@ io.on("connect", (socket) => {
     }
   }
 
-  // function handleDisconnect() {
-  //   console.log(`Socket disconnected: ${socket.id}`);
-  //   if (!socketRooms[socket.id]) return;
+  // Handle a socket dropping (tab close, refresh, network loss). Two paths:
+  //  - Mid-match (a round has started and no result yet): forfeit — the player
+  //    still in the room wins, and the game ends the normal way (finalizeGameEnd)
+  //    so the remaining client lands on the results screen instead of hanging
+  //    forever on a score that will never arrive. Both player objects are kept
+  //    intact so the results screen can still show names/scores for both.
+  //  - Otherwise (still in the lobby, or the match already ended): remove the
+  //    leaver; if that empties the room, drop the room entirely, else refresh
+  //    the remaining player's view so a waiting host falls back to screen 2.
+  // Reuses the existing "game-end"/"game-update" events, so no frontend change
+  // is needed. (Previously this handler was commented out — players who left
+  // were never cleaned up and mid-match drops hung the survivor indefinitely.)
+  function handleDisconnect() {
+    console.log(`Socket disconnected: ${socket.id}`);
+    const roomName = socketRooms[socket.id];
+    if (!roomName) return; // socket never joined a room
 
-  //   const currentGame = getGameObjFromRoom[socketRooms[socket.id]];
+    const currentGame = getGameObjFromRoom[roomName];
+    if (!currentGame) {
+      delete socketRooms[socket.id];
+      return; // room already torn down
+    }
 
-  //   delete currentGame.playerNumberFromId[socket.id];
-  //   currentGame.state.numPlayers -= 1;
-  // }
+    const playerNumber = currentGame.playerNumberFromId[socket.id];
+    if (playerNumber == null) {
+      delete socketRooms[socket.id];
+      return; // socket not mapped to a player slot
+    }
+    const leaver = currentGame.players[playerNumber];
+    const username = leaver ? leaver.username : "A player";
+
+    const matchInProgress =
+      currentGame.state.currentRound >= 1 &&
+      currentGame.state.result.winner == null &&
+      currentGame.state.numPlayers >= 2;
+
+    if (matchInProgress) {
+      // Forfeit to the opponent. Keep both player objects intact for the
+      // results payload; only drop the leaver's socket->room mapping.
+      const remainingId = Object.keys(currentGame.players).find(
+        (id) => Number(id) !== playerNumber,
+      );
+      currentGame.state.result.winner =
+        currentGame.players[remainingId].username;
+      currentGame.state.result.loser = username;
+      delete socketRooms[socket.id];
+      console.log(
+        `[Debug] ${username} left room ${roomName} mid-match — ${currentGame.state.result.winner} wins by forfeit`,
+      );
+      finalizeGameEnd(currentGame, roomName, Number(remainingId));
+      return;
+    }
+
+    // Not a live match — clear the leaver's bookkeeping.
+    delete currentGame.playerNumberFromId[socket.id];
+    delete currentGame.playerNumberFromUsername[username];
+    delete currentGame.players[playerNumber];
+    delete socketRooms[socket.id];
+    currentGame.state.numPlayers -= 1;
+
+    // Empty room → remove every record of it so stale rooms don't accumulate.
+    if (currentGame.state.numPlayers <= 0) {
+      delete getGameObjFromRoom[roomName];
+      console.log(`[Debug] Room ${roomName} is empty, removed`);
+      return;
+    }
+
+    // Someone's still waiting in the lobby — refresh their view.
+    console.log(`[Debug] ${username} left room ${roomName}`);
+    const messageData = {
+      user: "System",
+      message: `${username} has left the room!`,
+    };
+    io.in(roomName).emit("player-event", messageData);
+    io.in(roomName).emit("game-update", currentGame);
+  }
 });
 
 app.get("/", (req, res) => {

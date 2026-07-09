@@ -32,10 +32,21 @@ CLAUDE.md — this one is just for the realtime layer.
 - This server decides the match winner but does not persist rankings. `handlePlayerScore`
   decides the match via `getRoundWins` (`backend/utils.js`) — first-to-3 round wins,
   best of 5 (`WINS_TO_CLINCH`/`NUMBEROFROUNDS` constants), falling back to average
-  reaction time only as a tiebreaker if both hit the round-5 cap tied. It then POSTs the
-  result to Django's `/update_rank` and waits for the response before emitting `game-end`
-  to the room. Django is the source of truth for users/ranks; this server just relays that
-  part.
+  reaction time only as a tiebreaker if both hit the round-5 cap tied.
+- Ending a match (POST the decided result to Django's `/update_rank`, then emit `game-end`
+  to the room once Django responds) is centralised in the **`finalizeGameEnd(currentGame,
+  roomName, endingPlayerId)`** helper. The caller sets `state.result.winner`/`.loser` first;
+  `finalizeGameEnd` handles the Django round-trip and the emit. Two callers share it:
+  `handlePlayerScore` (normal finish) and `handleDisconnect` (forfeit). Django is the
+  source of truth for users/ranks; this server just relays that part.
+- **Disconnect handling forfeits in-progress matches.** `handleDisconnect` (now live) has
+  two paths: mid-match (a round started, no result yet, opponent still present) → set the
+  remaining player as winner and end via `finalizeGameEnd` so they land on the results
+  screen instead of hanging; otherwise (lobby, or already-ended) → remove the leaver, drop
+  the room if it's now empty, else emit `game-update` so a waiting host falls back to
+  screen 2. It reuses existing events (`game-end`/`game-update`), so no frontend change was
+  needed. `handlePlayerScore` also guards against a stray score arriving after a result is
+  already set (would otherwise read a score array off a missing player).
 - **Round-win counting needs no new socket payload fields.** `getRoundWins` derives
   wins purely from the existing `players[1].score`/`players[2].score` arrays (pairwise
   comparison, lower time wins, equal is a push) — both this server and the frontend
@@ -77,11 +88,14 @@ CLAUDE.md — this one is just for the realtime layer.
   theoretical.
 
 ## Known gaps (be aware, don't silently "fix" without asking)
-- The `disconnect` handler (`handleDisconnect`) is fully commented out at the bottom
-  of the `connect` block. Players who close the tab are never removed from
-  `socketRooms` or their game's `players` map — stale entries accumulate for the
-  life of the process. This is a known, currently-accepted gap, not an oversight to
-  silently patch.
+- `handleDisconnect` cleans up on *disconnect*, but a **forfeit-ended room is not torn
+  down** (same as a normally-ended room — the game object lingers in `getGameObjFromRoom`
+  until the process restarts). Only the fully-empty-room case deletes the room record.
+  Rooms therefore still accumulate over the process lifetime for *completed* matches; this
+  is the residual of the old "stale rooms" gap, now narrowed to ended-but-not-emptied rooms.
+- Disconnect detection is Socket.IO's transport-level `disconnect` only — a frozen/hung tab
+  that never actually drops the socket won't trigger it. The frontend's opponent-wait banner
+  (`OPPONENT_WAIT_TIMEOUT_MS` in `Game.jsx`) is the client-side backstop for that case.
 - No error handling middleware and no try/catch around most socket handlers — a
   thrown error inside a handler (e.g. `currentGame` being `undefined` if state got
   out of sync) will surface as an unhandled exception rather than a clean error to
