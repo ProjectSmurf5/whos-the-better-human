@@ -7,6 +7,7 @@
   min-height: 100vh;
   padding-top: 5rem;
   box-sizing: border-box;
+  background-color: var(--petrol);
 }
 
 .game-container {
@@ -15,15 +16,25 @@
   align-items: center;
   justify-content: center;
   flex: 1;
-  width: 100%;
-  max-width: calc(100% - 350px);
+  width: 100vw;
   padding: 1rem;
   box-sizing: border-box;
-  transition: max-width 0.3s ease;
 }
 
-.game-container.full-width {
-  max-width: 100%;
+.opponent-wait-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid rgba(244, 235, 224, 0.2);
+  border-radius: 1rem;
+  background-color: var(--petrol-deep);
+  color: var(--cream);
+  text-align: center;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9rem;
 }
 
 .main-container {
@@ -39,11 +50,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 0;
-  background-color: #d2ab99;
+  background-color: var(--terracotta);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   box-sizing: border-box;
-  height: 4rem;
+  height: 5rem;
+  border-radius: 10px 10px 0 0;
 }
 
 .nav-left {
@@ -80,6 +92,12 @@
   font-size: 1.5rem;
   color: #1c3235;
   font-weight: bold;
+}
+
+.room-code {
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-weight: 400;
+  letter-spacing: 0.05rem;
 }
 
 .dropdown-button {
@@ -122,131 +140,6 @@
   justify-content: space-evenly;
   align-items: center;
   flex-direction: row;
-}
-
-.table-container th {
-  color: black;
-  font-family: "Courier New", Courier, monospace;
-  font-weight: 400;
-  font-size: 1rem;
-  padding: 1rem;
-  text-align: center;
-}
-
-.table-container td {
-  color: #000;
-  font-size: 1.25rem;
-  text-align: center;
-  padding: 1rem;
-}
-.table-container tr:nth-child(even) {
-  background-color: #cca18e;
-}
-
-.table-container table {
-  border: 3px solid black;
-  overflow: hidden;
-  width: 100%;
-  border-collapse: collapse;
-  font-family: "Courier New", Courier, monospace;
-}
-
-.table-container {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.side-interface-container {
-  position: fixed;
-  top: 4rem;
-  right: 0;
-  width: 350px;
-  height: 100%;
-  background-color: #d2ab99;
-  color: white;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  transition: transform 0.3s ease;
-}
-
-.chat-container {
-  width: 100%;
-  height: calc(100vh - 4rem - 250px);
-  overflow-y: auto;
-  box-sizing: border-box;
-  border-bottom: 3px solid black;
-  border-right: 3px solid black;
-  border-left: 3px solid black;
-  background-color: #c08972;
-  scrollbar-width: thin;
-  scrollbar-color: #1c3235 #d2ab99;
-}
-
-/* Webkit browsers custom scrollbar */
-.chat-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-container::-webkit-scrollbar-track {
-  background: #d2ab99;
-  border-radius: 4px;
-}
-
-.chat-container::-webkit-scrollbar-thumb {
-  background-color: #1c3235;
-  border-radius: 4px;
-  border: 2px solid #d2ab99;
-}
-
-.chat-box {
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  color: black;
-  font-size: 1rem;
-  font-family: "Courier New", Courier, monospace;
-  min-height: 200px;
-}
-
-.chat-message {
-  margin-bottom: 0.5rem;
-  word-wrap: break-word;
-  background-color: rgba(255, 255, 255, 0.1);
-  padding: 0.5rem;
-  border-radius: 4px;
-}
-
-.chat-user {
-  font-weight: bold;
-  color: #333;
-}
-
-.chat-text {
-  color: #000;
-}
-
-.chat-empty {
-  color: #666;
-  text-align: center;
-  font-style: italic;
-}
-
-.chat-header {
-  width: 100%;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  box-sizing: border-box;
-  font-size: 0.75rem;
-  margin-bottom: 1rem;
-  font-family: "Courier New", Courier, monospace;
-  font-weight: 100;
-  text-align: left;
 }
 
 .round-container {

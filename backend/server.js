@@ -20,7 +20,7 @@ app.use(
         : "*",
     methods: ["GET", "POST"],
     credentials: true,
-  })
+  }),
 );
 
 // Create HTTP server and wrap Express app
@@ -38,10 +38,11 @@ const io = new Server(server, {
   },
 });
 
-const { makeid } = require("./utils");
+const { makeid, getRoundWins } = require("./utils");
 
 // SERVER WIDE SETTINGS
 const NUMBEROFROUNDS = 5;
+const WINS_TO_CLINCH = 3;
 
 /*
 game is a dictionary with the keys as the roomNumbers
@@ -72,7 +73,15 @@ let newGameObj = (roomName) => {
 let newPlayerObj = () => {
   return {
     score: [],
+    // Parallel to score — tooSoon[i] is true iff score[i] came from an early
+    // click (clicked during STEADY) rather than a real reaction or a missed
+    // timeout, both of which also submit the same 1000ms penalty value and
+    // would otherwise be indistinguishable from an early click by score alone.
+    tooSoon: [],
     isReady: false,
+    // Set when a player clicks Rematch on the results screen; when both are
+    // set, handleRematch resets the room and starts a fresh match.
+    wantsRematch: false,
     username: null,
     eloDiff: 0,
   };
@@ -89,7 +98,8 @@ io.on("connect", (socket) => {
 
   socket.on("player-ready", handlePlayerReady);
   socket.on("player-score", handlePlayerScore);
-  // socket.on("disconnect", handleDisconnect);
+  socket.on("rematch", handleRematch);
+  socket.on("disconnect", handleDisconnect);
 
   function handleJoinRoom(roomName, username) {
     if (!roomName) {
@@ -102,7 +112,7 @@ io.on("connect", (socket) => {
     let numsockets = room ? room.size : 0;
 
     console.log(
-      `[Debug] Join Room: Room ${roomName} exists with ${numsockets} socket(s)`
+      `[Debug] Join Room: Room ${roomName} exists with ${numsockets} socket(s)`,
     );
 
     if (!room || numsockets === 0) {
@@ -147,11 +157,12 @@ io.on("connect", (socket) => {
       };
       console.log(
         `[Debug] Emitting player-event to room ${roomName}:`,
-        messageData
+        messageData,
       );
 
       // Broadcast to all sockets in the room
       io.in(roomName).emit("player-event", messageData);
+      io.in(roomName).emit("game-update", currentGame);
     }, 100);
   }
 
@@ -188,7 +199,7 @@ io.on("connect", (socket) => {
       };
       console.log(
         `[Debug] Emitting player-event to room ${roomName}:`,
-        messageData
+        messageData,
       );
       // Emit to the specific socket
       socket.emit("player-event", messageData);
@@ -241,24 +252,131 @@ io.on("connect", (socket) => {
     }
   }
 
-  function handlePlayerScore(score) {
+  // Persist the (already-decided) match result to Django and emit "game-end"
+  // to the room. Extracted from handlePlayerScore so the normal match finish
+  // and a forfeit-by-disconnect (handleDisconnect) end the game identically.
+  // The caller must have already set currentGame.state.result.winner/.loser.
+  //
+  // @param currentGame - the room's game object, result already populated
+  // @param roomName - room to emit "game-end" to, passed explicitly since a
+  //   disconnecting socket can't be relied on to still map to its room
+  // @param endingPlayerId - player number stamped on the game-end payload
+  //   (the frontend ignores it today; kept for payload-shape parity)
+  function finalizeGameEnd(currentGame, roomName, endingPlayerId) {
+    console.log("Sending data to update_rank:", currentGame.state.result);
+    axios
+      .post(API_URL + "update_rank", currentGame.state.result)
+      .then((response) => {
+        console.log("Rank updated successfully:", response.data);
+        // A "Draw" result skips the rank lookup on the Django side and
+        // responds with { draw: true } instead of { winner, loser } — in
+        // that case there's no eloDiff to assign, just end the game.
+        if (!response.data.draw) {
+          console.log(
+            "Winner player number:",
+            currentGame.playerNumberFromUsername[response.data.winner.username],
+          );
+          console.log(
+            "Loser player number:",
+            currentGame.playerNumberFromUsername[response.data.loser.username],
+          );
+          const winnerPlayerNumber =
+            currentGame.playerNumberFromUsername[response.data.winner.username];
+          const loserPlayerNumber =
+            currentGame.playerNumberFromUsername[response.data.loser.username];
+
+          if (winnerPlayerNumber && currentGame.players[winnerPlayerNumber]) {
+            currentGame.players[winnerPlayerNumber].eloDiff =
+              response.data.winner.rank_diff;
+          }
+          if (loserPlayerNumber && currentGame.players[loserPlayerNumber]) {
+            currentGame.players[loserPlayerNumber].eloDiff =
+              response.data.loser.rank_diff;
+          }
+
+          // Log the updated game state
+          console.log("Updated game state:", {
+            player1: currentGame.players[1]
+              ? currentGame.players[1].eloDiff
+              : "no player 1",
+            player2: currentGame.players[2]
+              ? currentGame.players[2].eloDiff
+              : "no player 2",
+          });
+        }
+
+        console.log("Game Over!");
+        io.in(roomName).emit("game-end", {
+          playerNumber: endingPlayerId,
+          game: currentGame,
+        });
+      })
+      .catch((error) => {
+        console.error("Error updating rank:", error);
+        // Even if there's an error updating rank, we should still end the game
+        console.log("Game Over (with error)!");
+        io.in(roomName).emit("game-end", {
+          playerNumber: endingPlayerId,
+          game: currentGame,
+        });
+      });
+  }
+
+  // Old: "player-score" carried just the raw ms number, so a 1000 penalty
+  //   from an early click and a 1000 penalty from simply missing the CLICK
+  //   window were indistinguishable to the opponent (and to this server).
+  // New: carries { score, tooSoon }. score is stored exactly as before —
+  //   round-win/match-win logic is unaffected either way, a 1000 still loses
+  //   the round regardless of why. tooSoon is stored in a parallel array
+  //   purely so clients can show the accurate "TOO SOON" reason instead of
+  //   guessing from the score value.
+  function handlePlayerScore(payload) {
+    const { score, tooSoon } = payload;
     const currentGame = getGameObjFromRoom[socketRooms[socket.id]];
+    // Defensive: ignore a stray score once the match has already been decided
+    // (e.g. one that arrives right after a forfeit-by-disconnect set the
+    // result), or if the room/opponent is gone — otherwise the score-array
+    // length check below would read off a missing player object.
+    if (
+      !currentGame ||
+      currentGame.state.result.winner != null ||
+      !currentGame.players[1] ||
+      !currentGame.players[2]
+    ) {
+      return;
+    }
     const thisPlayerId = currentGame.playerNumberFromId[socket.id];
 
     console.log(
       `Room ${socketRooms[socket.id]} Received Player ${
         currentGame.playerNumberFromId[socket.id]
-      } Score: ${score}!`
+      } Score: ${score}! (tooSoon: ${tooSoon})`,
     );
     const playerNumber = currentGame.playerNumberFromId[socket.id];
     currentGame.players[playerNumber].score.push(score);
+    currentGame.players[playerNumber].tooSoon.push(tooSoon);
 
     if (
       currentGame.players[1].score.length ===
       currentGame.players[2].score.length
     ) {
       console.log("Both players have submitted scores!");
-      if (currentGame.state.currentRound >= NUMBEROFROUNDS) {
+      const { wins1, wins2 } = getRoundWins(
+        currentGame.players[1].score,
+        currentGame.players[2].score,
+      );
+      // Old: match ended only once every round had been played
+      //   (currentRound >= NUMBEROFROUNDS), and the winner was whoever had the
+      //   lower average reaction time across all 5 rounds.
+      // New: match ends as soon as either player clinches best-of-5
+      //   (WINS_TO_CLINCH round wins), same as the round cap being reached.
+      //   Winner is decided by round-win count; average time is now only a
+      //   tiebreaker for the rare case both hit the round-5 cap tied.
+      if (
+        wins1 >= WINS_TO_CLINCH ||
+        wins2 >= WINS_TO_CLINCH ||
+        currentGame.state.currentRound >= NUMBEROFROUNDS
+      ) {
         function getPlayerAverage(playerNumber) {
           let total = 0;
           let playerScores = currentGame.players[playerNumber].score;
@@ -268,78 +386,36 @@ io.on("connect", (socket) => {
           console.log(`Player ${playerNumber} Total: ${total}`);
           return total / currentGame.state.currentRound;
         }
-        const player1Average = getPlayerAverage(1);
-        const player2Average = getPlayerAverage(2);
-        console.log(`Player 1 Average: ${player1Average}`);
-        console.log(`Player 2 Average: ${player2Average}`);
-        if (player1Average < player2Average) {
+        console.log(
+          `Player 1 round wins: ${wins1}, Player 2 round wins: ${wins2}`,
+        );
+        if (wins1 > wins2) {
           currentGame.state.result.winner = `${currentGame.players[1].username}`;
           currentGame.state.result.loser = `${currentGame.players[2].username}`;
-        } else if (player1Average > player2Average) {
+        } else if (wins2 > wins1) {
           currentGame.state.result.winner = `${currentGame.players[2].username}`;
           currentGame.state.result.loser = `${currentGame.players[1].username}`;
         } else {
-          currentGame.state.result.winner = "Draw";
-          currentGame.state.result.loser = "Draw";
+          // Tied round wins at the round-5 cap (e.g. 2-2 with a push) — fall
+          // back to average reaction time as a tiebreaker, same comparison
+          // the old average-only model always used.
+          const player1Average = getPlayerAverage(1);
+          const player2Average = getPlayerAverage(2);
+          console.log(
+            `Tiebreak — Player 1 Average: ${player1Average}, Player 2 Average: ${player2Average}`,
+          );
+          if (player1Average < player2Average) {
+            currentGame.state.result.winner = `${currentGame.players[1].username}`;
+            currentGame.state.result.loser = `${currentGame.players[2].username}`;
+          } else if (player1Average > player2Average) {
+            currentGame.state.result.winner = `${currentGame.players[2].username}`;
+            currentGame.state.result.loser = `${currentGame.players[1].username}`;
+          } else {
+            currentGame.state.result.winner = "Draw";
+            currentGame.state.result.loser = "Draw";
+          }
         }
-        console.log("Sending data to update_rank:", currentGame.state.result);
-        axios
-          .post(API_URL + "update_rank", currentGame.state.result)
-          .then((response) => {
-            console.log("Rank updated successfully:", response.data);
-            console.log(
-              "Winner player number:",
-              currentGame.playerNumberFromUsername[
-                response.data.winner.username
-              ]
-            );
-            console.log(
-              "Loser player number:",
-              currentGame.playerNumberFromUsername[response.data.loser.username]
-            );
-            const winnerPlayerNumber =
-              currentGame.playerNumberFromUsername[
-                response.data.winner.username
-              ];
-            const loserPlayerNumber =
-              currentGame.playerNumberFromUsername[
-                response.data.loser.username
-              ];
-
-            if (winnerPlayerNumber && currentGame.players[winnerPlayerNumber]) {
-              currentGame.players[winnerPlayerNumber].eloDiff =
-                response.data.winner.rank_diff;
-            }
-            if (loserPlayerNumber && currentGame.players[loserPlayerNumber]) {
-              currentGame.players[loserPlayerNumber].eloDiff =
-                response.data.loser.rank_diff;
-            }
-
-            // Log the updated game state
-            console.log("Updated game state:", {
-              player1: currentGame.players[1]
-                ? currentGame.players[1].eloDiff
-                : "no player 1",
-              player2: currentGame.players[2]
-                ? currentGame.players[2].eloDiff
-                : "no player 2",
-            });
-
-            console.log("Game Over!");
-            io.in(socketRooms[socket.id]).emit("game-end", {
-              playerNumber: thisPlayerId,
-              game: currentGame,
-            });
-          })
-          .catch((error) => {
-            console.error("Error updating rank:", error);
-            // Even if there's an error updating rank, we should still end the game
-            console.log("Game Over (with error)!");
-            io.in(socketRooms[socket.id]).emit("game-end", {
-              playerNumber: thisPlayerId,
-              game: currentGame,
-            });
-          });
+        finalizeGameEnd(currentGame, socketRooms[socket.id], thisPlayerId);
         return;
       }
       currentGame.state.roundFinished = true;
@@ -348,23 +424,148 @@ io.on("connect", (socket) => {
     }
   }
 
-  // function handleDisconnect() {
-  //   console.log(`Socket disconnected: ${socket.id}`);
-  //   if (!socketRooms[socket.id]) return;
+  // Wipe a finished match's per-round state back to a fresh match, keeping the
+  // same room and the same two players (usernames + slot mappings preserved, so
+  // this can't reuse newPlayerObj which would blank the username). currentRound
+  // is set to 1 rather than 0 because a rematch drops straight into the first
+  // round — it skips the lobby "ready" screen (both players already opted in).
+  function resetGameForRematch(currentGame) {
+    Object.values(currentGame.players).forEach((player) => {
+      player.score = [];
+      player.tooSoon = [];
+      player.isReady = false;
+      player.wantsRematch = false;
+      player.eloDiff = 0;
+    });
+    currentGame.state.currentRound = 1;
+    currentGame.state.playersReady = 0;
+    currentGame.state.roundFinished = false;
+    currentGame.state.result = { winner: null, loser: null };
+  }
 
-  //   const currentGame = getGameObjFromRoom[socketRooms[socket.id]];
+  // A player clicked "Rematch" on the results screen. Only meaningful once the
+  // match has actually ended (guarded on result.winner). Marks this player's
+  // intent; once BOTH players want a rematch, reset the room and start round 1
+  // immediately — broadcast the fresh state (game-update) then "next-round",
+  // exactly like handlePlayerReady does at match start, so both clients drop
+  // straight into the first round. The requesting client shows its own
+  // "waiting for opponent" state locally (optimistic), so a single opt-in
+  // needs no broadcast.
+  function handleRematch() {
+    const roomName = socketRooms[socket.id];
+    if (!roomName) return;
+    const currentGame = getGameObjFromRoom[roomName];
+    if (!currentGame) return;
+    // Ignore rematch requests unless the match is genuinely over — otherwise a
+    // stray/early "rematch" would wipe an in-progress game.
+    if (currentGame.state.result.winner == null) return;
 
-  //   delete currentGame.playerNumberFromId[socket.id];
-  //   currentGame.state.numPlayers -= 1;
-  // }
+    const thisPlayerId = currentGame.playerNumberFromId[socket.id];
+    const player = currentGame.players[thisPlayerId];
+    if (!player || player.wantsRematch) return; // not mapped, or already opted in
+
+    player.wantsRematch = true;
+    console.log(
+      `[Debug] Player ${thisPlayerId} wants a rematch in room ${roomName}`,
+    );
+
+    const numWantRematch = Object.values(currentGame.players).filter(
+      (p) => p.wantsRematch,
+    ).length;
+
+    if (numWantRematch === 2) {
+      resetGameForRematch(currentGame);
+      console.log(`[Debug] Both players ready — starting rematch in ${roomName}`);
+      io.in(roomName).emit("game-update", currentGame);
+      io.in(roomName).emit("next-round");
+    }
+  }
+
+  // Handle a socket dropping (tab close, refresh, network loss). Two paths:
+  //  - Mid-match (a round has started and no result yet): forfeit — the player
+  //    still in the room wins, and the game ends the normal way (finalizeGameEnd)
+  //    so the remaining client lands on the results screen instead of hanging
+  //    forever on a score that will never arrive. Both player objects are kept
+  //    intact so the results screen can still show names/scores for both.
+  //  - Otherwise (still in the lobby, or the match already ended): remove the
+  //    leaver; if that empties the room, drop the room entirely, else refresh
+  //    the remaining player's view so a waiting host falls back to screen 2.
+  // Reuses the existing "game-end"/"game-update" events, so no frontend change
+  // is needed. (Previously this handler was commented out — players who left
+  // were never cleaned up and mid-match drops hung the survivor indefinitely.)
+  function handleDisconnect() {
+    console.log(`Socket disconnected: ${socket.id}`);
+    const roomName = socketRooms[socket.id];
+    if (!roomName) return; // socket never joined a room
+
+    const currentGame = getGameObjFromRoom[roomName];
+    if (!currentGame) {
+      delete socketRooms[socket.id];
+      return; // room already torn down
+    }
+
+    const playerNumber = currentGame.playerNumberFromId[socket.id];
+    if (playerNumber == null) {
+      delete socketRooms[socket.id];
+      return; // socket not mapped to a player slot
+    }
+    const leaver = currentGame.players[playerNumber];
+    const username = leaver ? leaver.username : "A player";
+
+    const matchInProgress =
+      currentGame.state.currentRound >= 1 &&
+      currentGame.state.result.winner == null &&
+      currentGame.state.numPlayers >= 2;
+
+    if (matchInProgress) {
+      // Forfeit to the opponent. Keep both player objects intact for the
+      // results payload; only drop the leaver's socket->room mapping.
+      const remainingId = Object.keys(currentGame.players).find(
+        (id) => Number(id) !== playerNumber,
+      );
+      currentGame.state.result.winner =
+        currentGame.players[remainingId].username;
+      currentGame.state.result.loser = username;
+      delete socketRooms[socket.id];
+      console.log(
+        `[Debug] ${username} left room ${roomName} mid-match — ${currentGame.state.result.winner} wins by forfeit`,
+      );
+      finalizeGameEnd(currentGame, roomName, Number(remainingId));
+      return;
+    }
+
+    // Not a live match — clear the leaver's bookkeeping.
+    delete currentGame.playerNumberFromId[socket.id];
+    delete currentGame.playerNumberFromUsername[username];
+    delete currentGame.players[playerNumber];
+    delete socketRooms[socket.id];
+    currentGame.state.numPlayers -= 1;
+
+    // Empty room → remove every record of it so stale rooms don't accumulate.
+    if (currentGame.state.numPlayers <= 0) {
+      delete getGameObjFromRoom[roomName];
+      console.log(`[Debug] Room ${roomName} is empty, removed`);
+      return;
+    }
+
+    // Someone's still waiting in the lobby — refresh their view.
+    console.log(`[Debug] ${username} left room ${roomName}`);
+    const messageData = {
+      user: "System",
+      message: `${username} has left the room!`,
+    };
+    io.in(roomName).emit("player-event", messageData);
+    io.in(roomName).emit("game-update", currentGame);
+  }
 });
 
 app.get("/", (req, res) => {
   console.log("Get request on api");
   res.send("Hello from Express + Socket.IO on Render!");
 
-  axios.get(API_URL + 'leaderboard').then((response) => {
-    console.log(response.data);})
+  axios.get(API_URL + "leaderboard").then((response) => {
+    console.log(response.data);
+  });
 });
 
 server.listen(PORT, () => {

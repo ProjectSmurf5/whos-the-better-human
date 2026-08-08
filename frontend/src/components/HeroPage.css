@@ -6,8 +6,8 @@
   top: 0; /* Align to the top */
   left: 0; /* Align to the left */
   width: 100%; /* Full width */
-  background-color: #1c3235; /* Dark background like buttons */
-  color: white; /* White text */
+  background-color: var(--petrol); /* Deep petrol background */
+  color: var(--cream); /* Light cream text */
   padding: 2rem 2rem; /* Padding */
   display: flex;
   justify-content: space-between; /* Space out left and right content */
@@ -23,6 +23,34 @@
 .navbar-left,
 .navbar-right {
   font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar-left b {
+  font-weight: 700;
+  color: #fff;
+}
+
+.navbar-icon {
+  width: 20px;
+  height: 20px;
+  /* Keep the pixel mascot crisp at small size */
+  image-rendering: pixelated;
+}
+
+.navbar-rank-label {
+  letter-spacing: 0.2rem;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.navbar-rank-value {
+  color: var(--yellow);
+  font-weight: 700;
+  font-size: 1.3rem;
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
 }
 
 /* Adjust HeroPage to account for the fixed navbar height */
@@ -31,8 +59,12 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100vw; /* body's align-items:center (index.css) shrink-wraps block
+    ancestors that don't set an explicit width; 100vw bypasses that chain the
+    same way .navbar's position:fixed does, so the background fills the
+    viewport instead of just the width of the hero content */
   height: 100vh;
-  background-color: #d2ab99;
+  background-color: var(--terracotta);
   padding-top: 60px; /* Add padding to prevent content from being hidden behind navbar */
   box-sizing: border-box; /* Include padding in the element's total width and height */
 }
@@ -58,22 +90,81 @@
   letter-spacing: 0.1rem;
 }
 
+/* Thin yellow underline accent beneath the hero title */
+.heroTitleAccent {
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--yellow);
+  margin: 0.5rem 0 1.5rem;
+}
+
 .roomInputField {
   width: 300px;
   height: 40px; /* Increased height to better match buttons */
   color: #1c3235;
+  background-color: var(--terracotta);
   border: solid 2px #1c3235;
   font-size: 1rem; /* Consistent font size */
-  padding-left: 1rem;
+  padding-left: 1.25rem;
   box-shadow: -2px 6px 0px 1px rgba(0, 0, 0, 0.6);
-  border-radius: 0.3rem; /* Optional: slightly rounded corners for input */
+  border-radius: 3rem; /* Pill shape to match buttons */
   box-sizing: border-box; /* Ensure padding and border are included in height */
+}
+
+.roomInputField::placeholder {
+  color: rgba(28, 50, 53, 0.55);
+}
+
+/* Decorative game-mode tag row */
+.mode-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  max-width: 700px;
+}
+
+.mode-tag {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.15rem;
+  color: #1c3235;
+  padding: 0.4rem 1rem;
+  border: 1.5px solid #1c3235;
+  border-radius: 3rem;
+  white-space: nowrap;
+}
+
+.mode-tag--new {
+  background-color: var(--yellow);
+  border-color: var(--yellow);
+  font-weight: 700;
 }
 
 .logo {
   width: 100px;
   height: 100px;
   margin-bottom: 1rem;
+  /* Gentle idle float for the stick-figure mascot (crown stays static) */
+  animation: heroFloat 3s ease-in-out infinite;
+}
+
+@keyframes heroFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo {
+    animation: none;
+  }
 }
 
 .kingImage {

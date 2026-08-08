@@ -1,46 +1,209 @@
 .game-over-container {
+  position: absolute;
   top: 0;
   left: 0;
-  position: absolute;
   z-index: 1000;
 
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 0.75rem;
   width: 100%;
   height: 100vh;
-  background-color: #d2ab99;
-  color: #000;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+  background-color: var(--petrol);
+  color: var(--cream);
   animation: fadeIn 0.5s ease-in-out;
+  overflow-y: auto;
 }
-.game-over-container h1 {
+
+/* Retro CRT scanlines, same treatment as Lobby/RoundResult. */
+.game-over-container::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.1) 0,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-over-container::after {
+    background: none;
+  }
+}
+
+.game-over-subheader {
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.2rem;
+  font-size: 0.9rem;
+  color: var(--yellow);
+}
+
+.game-over-mascot-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.game-over-mascot {
+  width: 60px;
+  height: 60px;
+  image-rendering: pixelated;
+}
+
+.game-over-crown {
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
+}
+
+.game-over-text {
   font-family: "Shrikhand", "Courier New", Courier, monospace;
   font-weight: 400;
   letter-spacing: 0.1rem;
   font-size: 48px;
-  margin-bottom: 5px;
+  color: var(--cream);
+  margin: 0;
+  text-align: center;
 }
-.game-over-container h2 {
-  font-size: 36px;
-  margin-bottom: 20px;
+
+.game-over-wins {
+  color: var(--yellow);
 }
-.game-over-container p {
-  font-size: 24px;
-  margin-bottom: 20px;
+
+.game-over-tally {
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
 }
-.game-over-container button {
-  width: 200px;
-  height: 50px;
-  border-radius: 3rem;
+
+.tally-winner {
+  color: var(--yellow);
 }
+
+.tally-loser {
+  color: rgba(244, 235, 224, 0.4);
+}
+
+.tally-dash {
+  color: rgba(244, 235, 224, 0.3);
+}
+
+.round-pip-strip {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+
+.round-pip {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.4rem;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  border: 2px solid rgba(244, 235, 224, 0.15);
+}
+
+.round-pip--winner {
+  border-color: var(--yellow);
+  color: var(--yellow);
+  background-color: rgba(245, 210, 30, 0.12);
+}
+
+.round-pip--loser {
+  color: rgba(244, 235, 224, 0.5);
+}
+
+.round-pip--push {
+  color: rgba(244, 235, 224, 0.3);
+  border-style: dashed;
+}
+
+.game-over-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.game-over-stat-tile {
+  min-width: 180px;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(244, 235, 224, 0.15);
+  border-radius: 0.75rem;
+  background-color: var(--petrol-deep);
+  text-align: center;
+}
+
+.stat-label {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.15rem;
+  color: rgba(244, 235, 224, 0.6);
+  margin: 0 0 0.4rem;
+}
+
+.stat-value {
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-size: 1.5rem;
+  color: var(--yellow);
+  margin: 0 0 0.25rem;
+}
+
+.stat-caption {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.75rem;
+  color: rgba(244, 235, 224, 0.6);
+  margin: 0;
+}
+
 .game-over-elogain {
-  font-size: 24px;
-  margin-bottom: 20px;
+  font-size: 1rem;
+  font-family: "Courier New", Courier, monospace;
+  color: rgba(244, 235, 224, 0.85);
+  margin: 0.25rem 0;
 }
-.keyframe {
-  animation: fadeIn 0.5s ease-in-out;
+
+.game-over-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
 }
+
+.game-over-buttons button {
+  min-width: 180px;
+  height: 50px;
+  padding: 0 1.5rem;
+  white-space: nowrap;
+}
+
+/* Rematch button once clicked — reads as pending, not clickable. */
+.game-over-buttons button:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.game-over-buttons button:disabled:hover {
+  transform: none;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

@@ -7,8 +7,6 @@ function SignUp({ handleSignIn }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const API_URL = "http://127.0.0.1:8000/signup";
-
   return (
     <div className="signup-container">
       <h2 className="signup-title">Sign Up</h2>

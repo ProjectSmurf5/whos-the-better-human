@@ -1,12 +1,28 @@
 import "../App.css";
 import ReactionBox from "./ReactionBox";
-import ReadyButton from "./ReadyButton";
+import RoundResult from "./RoundResult";
+import Lobby from "./Lobby";
 import { generateRandom } from "../utils/functions";
 import GameOver from "./GameOver";
 import NavBar from "./NavBar";
 import { useState, useEffect, use } from "react";
 import { socket } from "../socket";
 import axios from "axios";
+import hostAvatar from "../assets/wtbh-logo-white.png";
+import challengerAvatar from "../assets/wtbh-logo.png";
+
+// How long to wait for the opponent's score before showing a soft
+// "may have disconnected" banner. Not real forfeit detection (the server's
+// disconnect handler is still disabled) — just a generous heuristic so a
+// player isn't stuck staring at "awaiting opponent" forever.
+const OPPONENT_WAIT_TIMEOUT_MS = 9000;
+
+// Player 1 (host) is always the white stick figure, player 2 (challenger) is
+// always the black one — mirrors the fixed player-number scheme used
+// everywhere else (Lobby.jsx assigns these the same way).
+function avatarForPlayer(playerNum) {
+  return playerNum === 1 ? hostAvatar : challengerAvatar;
+}
 
 function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
   const [result, setResult] = useState({ winner: "", loser: "" });
@@ -15,17 +31,41 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
   const [timer1Running, setTimer1Running] = useState(false);
   const [timer1AFKTimeout, setTimer1AFKTimeout] = useState();
   const [eloGain, setEloGain] = useState(0);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [showSideInterface, setShowSideInterface] = useState(true);
 
   const [timerTwoStartStamp, setTimerTwoStartStamp] = useState();
   const [timerTwoAFKTimeout, setTimerTwoAFKTimeout] = useState();
 
   const [clickedReady, setClickedReady] = useState(false);
+  // Optimistic "I clicked Rematch" flag (mirrors clickedReady) — flips the
+  // results-screen button to "waiting for opponent" the moment it's pressed.
+  const [clickedRematch, setClickedRematch] = useState(false);
+
+  // Round-race state: myLastScore is the missing piece that used to be
+  // computed locally in clickHandler and only ever emitted, never stored, so
+  // a player had no way to see their own time until the opponent also
+  // finished. tooSoon distinguishes an early click ("TOO SOON") from a
+  // 1000ms auto-miss timeout, purely for the visual state.
+  const [myLastScore, setMyLastScore] = useState(null);
+  const [tooSoon, setTooSoon] = useState(false);
+  const [showOpponentWaitBanner, setShowOpponentWaitBanner] = useState(false);
 
   const gameState = gameObj.state;
   const API_URL =
     process.env.REACT_APP_DJANGO_API_URL || "http://localhost:8000/";
+
+  const opponentNumber = playerNumber === 1 ? 2 : 1;
+  // Both players' score arrays only grow to the current round's length once
+  // the server's "game-update" for that round has arrived (i.e. only after
+  // BOTH players have scored) — so this is naturally false until then, and
+  // resets itself next round since the arrays lag currentRound until both score.
+  // Guarded on both player slots existing: this is a plain top-level const,
+  // evaluated on every render including while the host is alone in the lobby
+  // (currentRound === 0, gameObj.players[2] not created yet until they join).
+  const roundResultReceived =
+    !!gameObj.players[1] &&
+    !!gameObj.players[2] &&
+    gameObj.players[1].score.length === gameState.currentRound &&
+    gameObj.players[2].score.length === gameState.currentRound;
 
   function readyHandler() {
     if (clickedReady) return;
@@ -37,6 +77,22 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
     setClickedReady(true);
   }
 
+  // Rematch: signal intent to the server and optimistically show "waiting for
+  // opponent". When both players opt in the server resets the room and emits
+  // game-update + next-round, which lands us back in round 1 (onRoundStart
+  // clears gameFinished/clickedRematch) — no dedicated response event needed.
+  function rematchHandler() {
+    if (clickedRematch) return;
+    socket.emit("rematch");
+    setClickedRematch(true);
+  }
+
+  // Old: "player-score" carried just the raw ms number, so the opponent
+  //   (and the server) couldn't tell a 1000 penalty from an early click
+  //   apart from a 1000 penalty from simply missing the CLICK window.
+  // New: carries { score, tooSoon } — tooSoon is true only for the early-click
+  //   branch below. server.js stores both in parallel arrays; a true miss
+  //   (timer2's auto-emit) sends tooSoon: false, same score, different reason.
   function clickHandler() {
     console.log("Player Clicked!");
     if (roundRunning) {
@@ -46,7 +102,8 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
       let reactionTime = Date.now() - timerTwoStartStamp;
 
       console.log(`Player Clicked at ${reactionTime}ms`);
-      socket.emit("player-score", reactionTime);
+      socket.emit("player-score", { score: reactionTime, tooSoon: false });
+      setMyLastScore(reactionTime);
       setClickedReady(false);
       return;
     } else {
@@ -56,8 +113,10 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
         clearTimeout(timer1AFKTimeout);
         setRoundRunning(false);
 
-        console.log("Player Clicked before Timer 1 Finished!");
-        socket.emit("player-score", 1000);
+        console.log("Player Clicked before Timer 1 Finished! (TOO SOON)");
+        socket.emit("player-score", { score: 1000, tooSoon: true });
+        setMyLastScore(1000);
+        setTooSoon(true);
         setClickedReady(false);
       }
     }
@@ -73,26 +132,6 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
       onGameEnd(gameEndData.game);
     });
 
-    // Add chat message handler
-    socket.on("chat", (messageData) => {
-      console.log("[Chat Debug] Received chat message:", messageData);
-      setChatMessages((prevMessages) => {
-        const newMessages = [...prevMessages, messageData];
-        console.log("[Chat Debug] Updated messages:", newMessages);
-        return newMessages;
-      });
-    });
-
-    // Add join/leave message handler
-    socket.on("player-event", (messageData) => {
-      console.log("[Chat Debug] Received player event:", messageData);
-      setChatMessages((prevMessages) => {
-        const newMessages = [...prevMessages, messageData];
-        console.log("[Chat Debug] Updated messages:", newMessages);
-        return newMessages;
-      });
-    });
-
     // Log initial socket connection status
     console.log("[Debug] Socket connected:", socket.connected);
     console.log("[Debug] Current room:", gameObj.roomName);
@@ -102,21 +141,37 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
       console.log("[Debug] Game component unmounting");
       socket.off("next-round");
       socket.off("game-end");
-      socket.off("chat");
-      socket.off("player-event");
     };
   }, []);
 
-  // Add effect to log chat messages changes
+  // Soft "opponent may have disconnected" heuristic: while I've scored this
+  // round but the opponent's score hasn't arrived yet, wait a generous window
+  // before surfacing a banner. Not real forfeit detection (the server's
+  // disconnect handler is disabled) — just an escape hatch so a player isn't
+  // stuck indefinitely if the opponent's tab silently hangs or closes.
   useEffect(() => {
-    console.log("[Chat Debug] Chat messages updated:", chatMessages);
-  }, [chatMessages]);
+    if (myLastScore == null || roundResultReceived) return;
+    const waitTimeoutId = setTimeout(() => {
+      setShowOpponentWaitBanner(true);
+    }, OPPONENT_WAIT_TIMEOUT_MS);
+    return () => clearTimeout(waitTimeoutId);
+  }, [myLastScore, roundResultReceived]);
 
   // Timer 1
   function onRoundStart() {
     setRoundRunning(false);
     console.log("Timer Triggered");
     setTimer1Running(true);
+
+    // Single reset point for the whole per-round race-view state machine.
+    setMyLastScore(null);
+    setTooSoon(false);
+    setShowOpponentWaitBanner(false);
+    // A round starting also covers the rematch case: the server reset the room
+    // and started round 1, so clear the finished/rematch flags to drop out of
+    // the results screen and back into play. Harmless no-ops during normal play.
+    setGameFinished(false);
+    setClickedRematch(false);
 
     // Random time between 2-4 secs
     let timerOneLength = generateRandom(2000) + 2000;
@@ -141,7 +196,9 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
     let timeoutId = setTimeout(() => {
       if (!roundRunning) {
         console.log(`Player Clicked at 1000 ms`);
-        socket.emit("player-score", 1000);
+        // Not a too-soon click — just never clicked during the CLICK window.
+        socket.emit("player-score", { score: 1000, tooSoon: false });
+        setMyLastScore(1000);
 
         console.log("Timer 2 Finished: Turning Screen Normal!");
 
@@ -159,88 +216,83 @@ function Game({ gameObj, playerNumber, handleMainMenu, setGameObj, username }) {
     console.log("Game Ended: ", finalGameObj);
   }
 
-  const toggleSideInterface = () => {
-    setShowSideInterface(!showSideInterface);
-  };
+  // Old: entering a room dropped straight into the reaction view (ReactionBox +
+  //   ReadyButton + right sidebar), with no lobby/waiting UI.
+  // New: while the match hasn't started (currentRound === 0) we show the <Lobby>
+  //   (design screens 2 & 3 — waiting for opponent / ready to start). Once the
+  //   first round begins (currentRound >= 1) the original in-game view renders
+  //   unchanged, so no game logic is affected.
+  const isLobby = gameObj.state.currentRound === 0 && !gameFinished;
 
   return (
-    <div className="Game">
-      <NavBar
-        roomName={gameObj.roomName}
-        showSideInterface={showSideInterface}
-        toggleSideInterface={toggleSideInterface}
-      />
+    <div className={`Game ${isLobby ? "Game--lobby" : ""}`}>
+      <NavBar roomName={gameObj.roomName} />
       {gameFinished ? (
         <GameOver
-          winner={gameObj.state.result.winner}
+          gameObj={gameObj}
+          playerNumber={playerNumber}
           handleMainMenu={handleMainMenu}
-          eloDifference={gameObj.players[playerNumber].eloDiff}
+          rematchHandler={rematchHandler}
+          clickedRematch={clickedRematch}
         />
       ) : null}
-      <div
-        className={`game-container ${!showSideInterface ? "full-width" : ""}`}>
-        <ReactionBox
-          clickHandler={clickHandler}
-          roundRunning={roundRunning}
-          timer1Running={timer1Running}
+      {isLobby ? (
+        <Lobby
+          gameObj={gameObj}
+          playerNumber={playerNumber}
+          username={username}
+          readyHandler={readyHandler}
+          clickedReady={clickedReady}
         />
-        <ReadyButton readyHandler={readyHandler} clickedReady={clickedReady} />
-      </div>
-      {showSideInterface && (
-        <div className="side-interface-container">
-          {
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Round</th>
-                    <th>Player 1</th>
-                    <th>Player 2</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 5 }).map((_, i) => {
-                    if (
-                      gameObj.players[1].score[i] != null &&
-                      gameObj.players[2].score[i] != null
-                    ) {
-                      return (
-                        <tr key={i}>
-                          <td>{i + 1}</td>
-                          <td>{gameObj.players[1].score[i]}</td>
-                          <td>{gameObj.players[2].score[i]}</td>
-                        </tr>
-                      );
-                    } else {
-                      return (
-                        <tr key={i}>
-                          <td>{i + 1}</td>
-                          <td>-</td>
-                          <td>-</td>
-                        </tr>
-                      );
-                    }
-                  })}
-                </tbody>
-              </table>
+      ) : !gameFinished ? (
+        <div className="game-container full-width">
+          {/* Old: always rendered <ReactionBox> + <ReadyButton> together,
+              with the reaction time computed in clickHandler only ever
+              emitted, never shown, so a player had no feedback until the
+              opponent also finished.
+              New: <ReactionBox> owns STEADY/CLICK only; the instant this
+              player has a score for the round (myLastScore set), it's
+              replaced by <RoundResult>, which shows that score immediately,
+              the opponent's once it arrives, and hosts the next-round Ready
+              button (now gated on both scores being in). */}
+          {myLastScore == null ? (
+            <ReactionBox
+              clickHandler={clickHandler}
+              roundRunning={roundRunning}
+              timer1Running={timer1Running}
+            />
+          ) : (
+            <RoundResult
+              myScore={myLastScore}
+              myTooSoon={tooSoon}
+              myUsername={username}
+              myAvatar={avatarForPlayer(playerNumber)}
+              myScores={gameObj.players[playerNumber].score}
+              opponentUsername={gameObj.players[opponentNumber].username}
+              opponentAvatar={avatarForPlayer(opponentNumber)}
+              opponentScore={
+                gameObj.players[opponentNumber].score[gameState.currentRound - 1]
+              }
+              opponentTooSoon={
+                gameObj.players[opponentNumber].tooSoon[gameState.currentRound - 1]
+              }
+              opponentScores={gameObj.players[opponentNumber].score}
+              roundResultReceived={roundResultReceived}
+              roundNumber={gameState.currentRound}
+              readyHandler={readyHandler}
+              clickedReady={clickedReady}
+            />
+          )}
+          {showOpponentWaitBanner && !roundResultReceived && (
+            <div className="opponent-wait-banner">
+              <p>Your opponent hasn't responded — they may have disconnected.</p>
+              <button className="pill-button--outline" onClick={handleMainMenu}>
+                Back to menu
+              </button>
             </div>
-          }
-          <div className="chat-container">
-            <div className="chat-box">
-              {chatMessages.length === 0 ? (
-                <p className="chat-empty">No messages yet</p>
-              ) : (
-                chatMessages.map((msg, index) => (
-                  <div key={index} className="chat-message">
-                    <span className="chat-user">{msg.user}: </span>
-                    <span className="chat-text">{msg.message}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

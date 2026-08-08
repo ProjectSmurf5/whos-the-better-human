@@ -3,7 +3,8 @@
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  padding: 1rem;
+  width: 100vw;
+  height: 100vh;
 }
 
 .reaction-box h1 {
@@ -11,22 +12,36 @@
 }
 
 .click-button {
-  width: 500px;
-  height: 500px;
-  border: 4px solid #1c3235;
+  width: 100%;
+  height: 100%;
+  border: 4px solid var(--petrol);
   font-size: 18px;
-  background-color: #1c3235;
+  background-color: var(--petrol);
   transition: none;
   -webkit-transition: none;
   color: white;
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.1rem;
+}
+
+/* STEADY... — deep-red/rust hold before the GO signal. Clicking here is
+   still routed through the normal early-click path (Game.jsx's
+   clickHandler), this is purely the visual state. */
+.steady {
+  background-color: var(--rust) !important;
+  border-color: var(--rust) !important;
+  font-size: 28px;
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
 }
 
 .click {
-  background-color: yellow !important;
+  background-color: var(--yellow) !important;
+  border-color: var(--yellow) !important;
   font-size: 48px;
   color: black;
   transition: none;
   -webkit-transition: none;
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
 }
 
 .round {
@@ -35,49 +50,37 @@
 
 @media (max-width: 1194px) {
   .click-button {
-    width: 400px;
-    height: 400px;
     font-size: 16px;
   }
   .click {
     font-size: 32px;
+  }
+  .steady {
+    font-size: 20px;
   }
   .round {
     font-size: 16px;
   }
   .reaction-box h1 {
     font-size: 24px;
-  }
-  .reaction-box {
-    padding: 0.5rem;
-    width: 400px;
-    height: 400px;
-  }
-  .reaction-box h1 {
     margin: 0;
   }
 }
 @media (max-width: 900px) {
   .click-button {
-    width: 300px;
-    height: 300px;
     font-size: 14px;
   }
   .click {
     font-size: 24px;
+  }
+  .steady {
+    font-size: 16px;
   }
   .round {
     font-size: 14px;
   }
   .reaction-box h1 {
     font-size: 20px;
-  }
-  .reaction-box {
-    padding: 0.5rem;
-    width: 300px;
-    height: 300px;
-  }
-  .reaction-box h1 {
     margin: 0;
   }
 }

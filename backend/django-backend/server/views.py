@@ -64,6 +64,16 @@ def update_rank(request):
     winner_username = request.data.get('winner')
     loser_username = request.data.get('loser')
 
+    # Old: a tied match always looked up UserProfile rows for "winner"/"loser"
+    #   usernames, so a real "Draw" result 404'd here since no user is named
+    #   "Draw". This was rarely hit under the old average-time win condition
+    #   (float equality), but is a realistic outcome under first-to-3 round
+    #   wins (a tied round-win count at the round cap).
+    # New: skip the rank lookup/update entirely for a draw and report it as
+    #   a distinct, successful response instead of erroring.
+    if winner_username == 'Draw' or loser_username == 'Draw':
+        return Response({'draw': True}, status=status.HTTP_200_OK)
+
     winner = get_object_or_404(UserProfile, user__username=winner_username)
     loser = get_object_or_404(UserProfile, user__username=loser_username)
 

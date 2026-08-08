@@ -1,0 +1,166 @@
+.round-result {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+
+/* Retro CRT scanlines, same treatment as Lobby, scoped to the
+   result/comparison view only — the click-target ReactionBox stays a crisp
+   solid color so the reflex test itself isn't visually noisy. */
+.round-result::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.1) 0,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .round-result::after {
+    background: none;
+  }
+}
+
+.round-result > * {
+  position: relative;
+  z-index: 1;
+}
+
+.round-status-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.15rem;
+  font-size: 0.9rem;
+  color: var(--yellow);
+}
+
+.round-tally {
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-size: 1.3rem;
+  letter-spacing: 0.1rem;
+}
+
+.race-lane {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  border: 2px solid rgba(244, 235, 224, 0.15);
+  border-radius: 1rem;
+  background-color: var(--petrol-deep);
+}
+
+.race-lane--fastest {
+  border-color: var(--yellow);
+  box-shadow: 0 0 25px rgba(245, 210, 30, 0.35);
+}
+
+.race-badge {
+  position: absolute;
+  top: -0.9rem;
+  left: 1.5rem;
+  background-color: var(--yellow);
+  color: var(--petrol);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 3rem;
+}
+
+.race-avatar {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+}
+
+.race-name {
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-size: 1.2rem;
+  color: var(--cream);
+  white-space: nowrap;
+}
+
+.race-bar-track {
+  height: 14px;
+  border-radius: 3rem;
+  background-color: rgba(244, 235, 224, 0.12);
+  overflow: hidden;
+}
+
+.race-bar-fill {
+  height: 100%;
+  border-radius: 3rem;
+  transition: width 0.4s ease;
+}
+
+.race-bar-fill--mine {
+  background-color: var(--yellow);
+}
+
+.race-bar-fill--opponent {
+  background-color: rgba(244, 235, 224, 0.6);
+}
+
+.race-time {
+  font-family: "Shrikhand", "Courier New", Courier, monospace;
+  font-size: 1.4rem;
+  color: var(--yellow);
+  white-space: nowrap;
+}
+
+.race-too-soon {
+  grid-column: 3 / span 2;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.1rem;
+  color: var(--rust);
+}
+
+.race-pending {
+  grid-column: 3 / span 2;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.95rem;
+  color: rgba(244, 235, 224, 0.5);
+}
+
+.round-caption {
+  text-align: center;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9rem;
+  color: rgba(244, 235, 224, 0.7);
+}
+
+@media (max-width: 700px) {
+  .race-lane {
+    grid-template-columns: auto 1fr;
+    row-gap: 0.5rem;
+  }
+  .race-bar-track,
+  .race-too-soon,
+  .race-pending {
+    grid-column: 1 / -1;
+  }
+  .race-time {
+    grid-column: 2;
+    justify-self: end;
+  }
+}
